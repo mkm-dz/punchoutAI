@@ -1,2 +1,4 @@
-punchout-ai/punchOutAI.egg-info/**/*
+punchout-ai/punchout_ai.egg-info/**/*
+punchout-ai/punchout_ai/__pycache__/**/*
+punchout-ai/punchout_ai/envs/__pycache__/**/*
 .vscode/**/*
