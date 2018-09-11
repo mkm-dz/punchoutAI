@@ -221,7 +221,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (this.IsRoundOver())
 			{
-				if (GetHealthP2() >= 0)
+				if (GetHealthP2() > 0)
 				{
 					return "P2";
 				}
