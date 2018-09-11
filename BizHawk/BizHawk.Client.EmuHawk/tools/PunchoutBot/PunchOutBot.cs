@@ -293,7 +293,7 @@ namespace BizHawk.Client.EmuHawk
 
 					if (!invert)
 					{
-						if (theValue.Value) // Force
+						if (theValue.HasValue) // Force
 						{
 							Global.LuaAndAdaptor.SetButton(toPress, theValue.Value);
 							Global.ActiveController.Overrides(Global.LuaAndAdaptor);
