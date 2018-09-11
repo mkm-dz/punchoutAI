@@ -56,7 +56,6 @@ namespace BizHawk.Client.EmuHawk
 		private bool _bigEndian;
 		private int _dataSize;
 
-		private int tempCounter = 0;
 		private int _wins = 0;
 		private int _losses = 0;
 		private int _p2_wins = 0;
@@ -121,7 +120,7 @@ namespace BizHawk.Client.EmuHawk
 				GameState gs = GetCurrentState();
 				string data = JsonConvert.SerializeObject(gs);
 
-				byte[] msg = Encoding.ASCII.GetBytes(data+"-------"+(this.tempCounter++));
+				byte[] msg = Encoding.ASCII.GetBytes(data);
 				stream.Write(msg, 0, msg.Length);
 
 				StringBuilder myCompleteMessage = new StringBuilder();
@@ -172,146 +171,64 @@ namespace BizHawk.Client.EmuHawk
 
 		#endregion
 
-		#region streetfighter
+		#region punchout
 
-		public uint get_p2_move()
+		public int GetOpponentId()
 		{
-			if (is_p2_in_move())
+			return _currentDomain.PeekByte(0x0001);
+		}
+
+		public int GetHealthP1()
+		{
+			return _currentDomain.PeekByte(0x0391);
+		}
+
+		public int GetHealthP2()
+		{
+			return _currentDomain.PeekByte(0x0398);
+		}
+
+		public int GetOpponentAction()
+		{
+			return _currentDomain.PeekByte(0x003A);
+		}
+
+		public bool GetOpponentIsMoving()
+		{
+			if (_currentDomain.PeekByte(0x0039) <= 1)
 			{
-				uint val = (uint)_currentDomain.PeekUint(0x0007E5, _bigEndian);
-				return val;
+				return true;
 			}
-			return 0;
-
+			return false;
 		}
-		public bool is_p2_in_move()
+
+		public bool IsRoundStarted()
 		{
-			if (_currentDomain.PeekByte(0x0007E9) == 0)
+			if (_currentDomain.PeekByte(0x0004) == 255)
 			{
-				return false;
+				return true;
 			}
-			return true;
+
+			return false;
 		}
 
-		public int p_width_delta()
+		private bool IsRoundOver()
 		{
-			return _currentDomain.PeekByte(0x0007EB);
+			return GetHealthP1() <= 0|| GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
 		}
 
-		public uint get_p1_move()
+		private string GetRoundResult()
 		{
-			if (is_p1_in_move())
+			if (this.IsRoundOver())
 			{
-				uint val = (uint)_currentDomain.PeekUint(0x0005E5, _bigEndian);
-				return val;
-			}
-			return 0;
-
-		}
-		public bool is_p1_in_move()
-		{
-			if (_currentDomain.PeekByte(0x0005E9) == 0)
-			{
-				return false;
-			}
-			return true;
-		}
-
-		public int get_framecount()
-		{
-			return Emulator.Frame;
-		}
-
-		public int get_p1_health()
-		{
-			return _currentDomain.PeekByte(0x000530);
-		}
-
-		public int get_p2_health()
-		{
-			return _currentDomain.PeekByte(0x000730);
-		}
-
-		public int get_p1_character()
-		{
-			return _currentDomain.PeekByte(0x0005D1);
-		}
-
-		public int get_p2_character()
-		{
-			return _currentDomain.PeekByte(0x0007D1);
-		}
-
-		public int get_p1_x()
-		{
-			// make sure we are little endian
-			return _currentDomain.PeekUshort(0x000022, _bigEndian);
-		}
-
-		public int get_p2_x()
-		{
-			return _currentDomain.PeekUshort(0x000026, _bigEndian);
-		}
-
-		public int get_p1_y()
-		{
-			return _currentDomain.PeekByte(0x00050A);
-		}
-
-		public int get_p2_y()
-		{
-			return _currentDomain.PeekByte(0x00070A);
-		}
-
-		public bool is_p1_jumping()
-		{
-			return _currentDomain.PeekByte(0x0005EA) == 1;
-		}
-
-		public bool is_p2_jumping()
-		{
-			return _currentDomain.PeekByte(0x0007EA) == 1;
-		}
-
-		public int p_height_delta()
-		{
-			return _currentDomain.PeekByte(0x0005ED);
-		}
-
-		public bool is_p1_crouching()
-		{
-			return _currentDomain.PeekByte(0x000544) == 1;
-		}
-
-		public bool is_p2_crouching()
-		{
-			return _currentDomain.PeekByte(0x00744) == 1;
-		}
-
-		public int get_timer()
-		{
-			return _currentDomain.PeekByte(0x0018F3);
-		}
-
-		public bool is_round_started()
-		{
-			return get_timer() > 0 && get_timer() <= 152;
-		}
-
-		private bool is_round_over()
-		{
-			return get_p1_health() == 255 || get_p2_health() == 255 || get_timer() <= 0;
-		}
-
-		private string get_round_result()
-		{
-			if (get_p1_health() == 255)
-			{
-				return "P2";
-			}
-			else if (get_p2_health() == 255)
-			{
-				return "P1";
+				if (GetHealthP2() >= 0)
+				{
+					return "P2";
+				}
+				else
+				{
+					return "P1";
+				}
 			}
 			else
 			{
@@ -376,7 +293,7 @@ namespace BizHawk.Client.EmuHawk
 
 					if (!invert)
 					{
-						if (theValue.HasValue) // Force
+						if (theValue.Value) // Force
 						{
 							Global.LuaAndAdaptor.SetButton(toPress, theValue.Value);
 							Global.ActiveController.Overrides(Global.LuaAndAdaptor);
@@ -406,13 +323,10 @@ namespace BizHawk.Client.EmuHawk
 			}
 			public int character { get; set; }
 			public int health { get; set; }
-			public int x { get; set; }
-			public int y { get; set; }
-			public bool jumping { get; set; }
-			public bool crouching { get; set; }
+
 			public Dictionary<string, bool> buttons { get; set; }
-			public bool in_move { get; set; }
-			public uint move { get; set; }
+			public bool InMove { get; set; }
+			public int action{ get; set; }
 
 
 		}
@@ -424,12 +338,9 @@ namespace BizHawk.Client.EmuHawk
 			public PlayerState p1 { get; set; }
 			public PlayerState p2 { get; set; }
 			public int frame { get; set; }
-			public int timer { get; set; }
 			public string result { get; set; }
 			public bool round_started { get; set; }
 			public bool round_over { get; set; }
-			public int height_delta { get; set; }
-			public int width_delta { get; set; }
 		}
 
 		private GameState GetCurrentState()
@@ -437,55 +348,28 @@ namespace BizHawk.Client.EmuHawk
 			PlayerState p1 = new PlayerState();
 			PlayerState p2 = new PlayerState();
 			GameState gs = new GameState();
-			p1.health = get_p1_health();
-			p1.x = get_p1_x();
-			p1.y = get_p1_y();
-			p1.jumping = is_p1_jumping();
-			p1.crouching = is_p1_crouching();
-			p1.character = get_p1_character();
+			p1.health = GetHealthP1();
+			p1.action = 0;
 			p1.buttons = GetJoypadButtons(1);
-			p1.move = get_p1_move();
-			p1.in_move = is_p1_in_move();
+			p1.character = -1;
+			p1.InMove = false;
 
-
-			p2.health = get_p2_health();
-			p2.x = get_p2_x();
-			p2.y = get_p2_y();
-			p2.jumping = is_p2_jumping();
-			p2.crouching = is_p2_crouching();
-			p2.character = get_p2_character();
+			p2.health = GetHealthP2();
+			p2.action = GetOpponentAction();
 			p2.buttons = GetJoypadButtons(2);
-			p2.move = get_p2_move();
-			p2.in_move = is_p2_in_move();
+			p2.character = GetOpponentId();
+			p2.InMove = GetOpponentIsMoving();
+
 
 			gs.p1 = p1;
 			gs.p2 = p2;
-			gs.result = get_round_result();
+			gs.result = GetRoundResult();
 			gs.frame = Emulator.Frame;
-			gs.timer = get_timer();
-			gs.round_started = is_round_started();
-			gs.round_over = is_round_over();
-			gs.height_delta = p_height_delta();
-			gs.width_delta = p_width_delta();
+			gs.round_started = IsRoundStarted();
+			gs.round_over = IsRoundOver();
 
 			return gs;
 		}
-		#endregion
-
-		#region UI Bindings
-
-
-
-		
-
-
-
-		
-
-
-
-
-
 		#endregion
 
 		#region IToolForm Implementation
@@ -630,7 +514,6 @@ namespace BizHawk.Client.EmuHawk
 			public string type { get; set; }
 			public Dictionary<string, bool> p1 { get; set; }
 			public Dictionary<string, bool> p2 { get; set; }
-			public int player_count { get; set; }
 			public string savegamepath { get; set; }
 
 		}
@@ -705,12 +588,12 @@ namespace BizHawk.Client.EmuHawk
 			if (_isBotting)
 			{
 
-				if (is_round_over() && game_in_progress)
+				if (IsRoundOver() && game_in_progress)
 				{
 					_post_round_wait_time--;
 					game_in_progress = false;
 					_totalGames = _totalGames + 1;
-					if (get_round_result() == "P1")
+					if (GetRoundResult() == "P1")
 					{
 						_wins = _wins + 1;
 						_lastResult = "P1 Win";
