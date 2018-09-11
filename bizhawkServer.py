@@ -22,7 +22,7 @@ class Payload(object):
 print('waiting for a connection')
 counter=0
 connection, client_address = sock.accept()
-template='{"p1":{"Up":false,"Down":false,"Left":%s,"Right":false,"Start":false,"Select":false,"B":%s,"A":false},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\vidal\\\\Desktop\\\\punchOut.state"}'
+template='{"p1":{"Up":%s,"Down":false,"Left":%s,"Right":false,"Start":false,"Select":false,"B":%s,"A":false},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\vidal\\\\Desktop\\\\punchOut.state"}'
 try:
     print('connection from %s' % client_address[0])
     counter=0
@@ -30,23 +30,26 @@ try:
     while True:
         counter=counter+1
         pressed="false"
+        holdingUp="true"
         commandType="buttons"
         data = connection.recv(1024).decode()
         if data:
-             if ((counter % 50) == 0 ) or (frameSkip < 6 and frameSkip > 0):
+             if ((counter % 150) == 0 ) or (frameSkip < 6 and frameSkip > 0):
                  pressed="true"
+                 holdingUp="false"
                  frameSkip=frameSkip+1
                  counter=0
              else:
                  pressed="false"
                  frameSkip=0
+                 holdingUp="true"
              deserializedObject = Payload(data)
              print('received "%s"' % data)
              if deserializedObject.round_over == True:
                 commandType="reset"
              else:
                  commandType="false"
-             formattedTemplate = template % (pressed,pressed,commandType)
+             formattedTemplate = template % (holdingUp,pressed,pressed,commandType)
              connection.sendall(formattedTemplate.encode('utf-8'))
 
         else:
