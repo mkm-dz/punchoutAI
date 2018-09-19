@@ -1,5 +1,6 @@
 import gym
 import punchout_ai
+from classes.bizhawkServer import BizHawkServer
  
 def callback(lcl, glb):
     # stop training if reward exceeds 199
@@ -9,6 +10,8 @@ def callback(lcl, glb):
 def main():
     # create the environment
     env = gym.make("punchoutAI-v0") # <-- this we need to create
+    server=BizHawkServer()
+    server.mainLoop()
  
     # # create the learning agent
     # model = deepq.models.mlp([16, 16])

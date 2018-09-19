@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 from gym import error, spaces, utils
 from gym.utils import seeding
 
@@ -16,10 +17,14 @@ class punchoutAIEnv(gym.Env):
         "result": spaces.Discrete(2),
     })
 
-    self.action_space = spaces.MultiDiscrete([
-        [0,4], #None, Up, Right, Down, Left
-        [0,6], #None, A, B, X, Y, L ,R
-    ])
+    self.action_space = spaces.Box(
+        # The first array is the lowest accepted values
+        # The second is the highest accepted values
+        # [0,4] None, Up, Right, Down, Left
+        # [0,2] None, A, B
+        np.array([0,0]),
+        np.array([4,2]),
+    )
 
     self.seed()
 
