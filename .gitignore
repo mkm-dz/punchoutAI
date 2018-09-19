@@ -5,3 +5,4 @@ punchout-ai/punchout_ai/envs/__pycache__/**/*
 BizHawk/**/*
 !BizHawk/BizHawk.Client.EmuHawk/tools/PunchoutBot/**/*
 classes/__pycache__/**/*
+__pycache__/**/*

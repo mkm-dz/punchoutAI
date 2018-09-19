@@ -1,7 +1,8 @@
 import gym
 import punchout_ai
 from classes.bizhawkServer import BizHawkServer
- 
+from classes.runner import RunWrapper
+
 def callback(lcl, glb):
     # stop training if reward exceeds 199
     is_solved = lcl['t'] > 100 and sum(lcl['episode_rewards'][-101:-1]) / 100 >= 199
@@ -10,7 +11,8 @@ def callback(lcl, glb):
 def main():
     # create the environment
     env = gym.make("punchoutAI-v0") # <-- this we need to create
-    server=BizHawkServer()
+    runner=RunWrapper(env)
+    server=BizHawkServer(runner)
     server.mainLoop()
  
     # # create the learning agent
