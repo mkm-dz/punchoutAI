@@ -1,32 +1,48 @@
 import gym
 import punchout_ai
+import os
+import numpy as np
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
 from classes.runner import RunWrapper
+from classes.Agent import Agent
 
-def callback(lcl, glb):
-    # stop training if reward exceeds 199
-    is_solved = lcl['t'] > 100 and sum(lcl['episode_rewards'][-101:-1]) / 100 >= 199
-    return is_solved
- 
-def main():
-    # create the environment
-    env = gym.make("punchoutAI-v0") # <-- this we need to create
-    runner=RunWrapper(env)
-    server=BizHawkServer(runner)
-    server.mainLoop()
- 
-    # # create the learning agent
-    # model = deepq.models.mlp([16, 16])
- 
-    # # train the agent on the environment
-    # act = deepq.learn(
-    #     env, q_func=model, lr=1e-3,
-    #     max_timesteps=200000, buffer_size=50000, exploration_fraction=0.1,
-    #     exploration_final_eps=0.02, print_freq=10, callback=callback
-    # )
- 
-    # # save trained model
-    # act.save("balance.pkl")
- 
-if __name__ == '__main__':
-    main()
+class Program:
+    def __init__(self):
+        self.sample_batch_size = 32
+        self.episodes          = 10000
+        self.env               = gym.make("punchoutAI-v0")
+
+        self.state_size        = self.env.observation_space.n
+        self.action_size       = self.env.action_space.n
+        self.agent             = Agent(self.state_size, self.action_size)
+        self.runner = None
+        self.server = None
+
+
+    def run(self):
+        self.runner = RunWrapper(self.env)
+        self.server = BizHawkServer(self.runner)
+        try:
+            for index_episode in range(self.episodes):
+                state = self.env.reset()
+                state = np.reshape(state, [1, self.state_size])
+
+                done = False
+                index = 0
+                while not done:
+                    action = self.agent.act(state)
+
+                    next_state, reward, done, _ = self.env.step(action)
+                    next_state = np.reshape(next_state, [1, self.state_size])
+                    self.agent.remember(state, action, reward, next_state, done)
+                    state = next_state
+                    index += 1
+                print("Episode {}# Score: {}".format(index_episode, index + 1))
+                self.agent.replay(self.sample_batch_size)
+        finally:
+            self.agent.save_model()
+
+if __name__ == "__main__":
+    program = Program()
+    program.run()
