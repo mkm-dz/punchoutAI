@@ -15,7 +15,6 @@ class BizHawkServer(threading.Thread):
     template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":false,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\vidal\\\\Desktop\\\\punchOut.state"}'
 
     hit = False
-    processing = False
     healthP1 = 100
     healthP2 = 100
     sock = None
@@ -25,6 +24,7 @@ class BizHawkServer(threading.Thread):
     frameCounter = 0
     resendCommand = False
     msg = None
+    commandSent = False
 
     def __init__(self, runner: RunWrapper):
         threading.Thread.__init__(self)
@@ -41,23 +41,15 @@ class BizHawkServer(threading.Thread):
         # Listen for incoming connections
         self.sock.listen(1)
 
-    def SetButtons(self, up, down, left, right, a, b):
-        #This is the javascript way not the python way.
-        self.buttons = {'up': up,
-                        'down': down,
-                        'left': left,
-                        'right': right,
-                        'a': a,
-                        'b': b}
-
     def SendIdle(self) -> str:
         formattedTemplate = self.template % (
             False, False, False, False, False, False, 'processing')
         return formattedTemplate
 
-    def SendStateToEmulator(self, command: str)->str:
+    def SendCommandToEmulator(self)->str:
         formattedTemplate = self.template % (
-            self.buttons.up, self.buttons.down, self.buttons.left, self.buttons.right, self.buttons.a, self.buttons.b, command)
+        self.buttons['up'], self.buttons['down'], self.buttons['left'], self.buttons['right'], self.buttons['a'], self.buttons['b'], self.commandInQueue)
+        self.commandSent = True
         return formattedTemplate
 
     def ProcessCommand(self):
@@ -67,12 +59,10 @@ class BizHawkServer(threading.Thread):
         #     self.hit=True
         # self.runner.SendData()
         tempHolder = self.commandInQueue
-        self.commandInQueue = None
         if(tempHolder == 'GetState'):
             pass
-        if(tempHolder == 'SendState'):
-            return self.SendStateToEmulator('buttons')
-        return self.SendIdle()
+        elif(tempHolder != None):
+            return self.SendCommandToEmulator()
 
     def run(self):
         # Wait for a connection
@@ -96,6 +86,9 @@ class BizHawkServer(threading.Thread):
                             msg = self.ProcessCommand()
 
                     connection.sendall(msg.encode('utf-8'))
+                    if(self.commandInQueue != None and self.commandSent == True):
+                        self.commandInQueue = None
+                        self.commandSent = False
                     #  if ((counter % 150) == 0 ) or (frameSkip < 6 and frameSkip > 0):
                     #      pressed="true"
                     #      holdingUp="false"

@@ -136,7 +136,7 @@ namespace BizHawk.Client.EmuHawk
 					}
 					while (stream.DataAvailable);
 				}
-				cc = JsonConvert.DeserializeObject<ControllerCommand>(myCompleteMessage.ToString());
+				cc = JsonConvert.DeserializeObject<ControllerCommand>(myCompleteMessage.ToString().ToLower());
 			}
 			catch (ArgumentNullException ane)
 			{
