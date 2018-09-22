@@ -2,6 +2,7 @@ import gym
 import punchout_ai
 import os
 import numpy as np
+import threading
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
 from classes.runner import RunWrapper
@@ -23,6 +24,7 @@ class Program:
     def run(self):
         self.runner = RunWrapper(self.env)
         self.server = BizHawkServer(self.runner)
+        self.server.start()
         try:
             for index_episode in range(self.episodes):
                 state = self.env.reset()
