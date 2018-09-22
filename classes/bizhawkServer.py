@@ -5,12 +5,14 @@ import json
 import threading
 from classes.runner import RunWrapper
 
+
 class Payload(object):
     def __init__(self, j):
             self.__dict__ = json.loads(j)
 
+
 class BizHawkServer(threading.Thread):
-    template='{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":false,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\vidal\\\\Desktop\\\\punchOut.state"}'
+    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":false,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\vidal\\\\Desktop\\\\punchOut.state"}'
 
     hit = False
     processing = False
@@ -18,16 +20,17 @@ class BizHawkServer(threading.Thread):
     healthP2 = 100
     sock = None
     commandInQueue = None
-    buttons=None
-    runner=None
-    frameCounter=0
-    msg=None
+    buttons = None
+    runner = None
+    frameCounter = 0
+    resendCommand = False
+    msg = None
 
     def __init__(self, runner: RunWrapper):
         threading.Thread.__init__(self)
         # Create a TCP/IP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+
         # Setting runner
         self.runner = runner
         # Bind the socket to the port
@@ -38,60 +41,59 @@ class BizHawkServer(threading.Thread):
         # Listen for incoming connections
         self.sock.listen(1)
 
-    def SetButtons(self, up,down,left,right,a,b):
+    def SetButtons(self, up, down, left, right, a, b):
         #This is the javascript way not the python way.
-        self.buttons= { 'up':up,
-                        'down':down,
-                        'left':left,
-                        'right':right,
-                        'a':a,
-                        'b':b }
+        self.buttons = {'up': up,
+                        'down': down,
+                        'left': left,
+                        'right': right,
+                        'a': a,
+                        'b': b}
 
     def SendIdle(self) -> str:
-        formattedTemplate = self.template % (False,False,False,False,False,False,'processing')
+        formattedTemplate = self.template % (
+            False, False, False, False, False, False, 'processing')
         return formattedTemplate
-    
+
     def SendStateToEmulator(self, command: str)->str:
-        formattedTemplate = self.template % (self.buttons.up,self.buttons.down,self.buttons.left,self.buttons.right,self.buttons.a,self.buttons.b, command)
+        formattedTemplate = self.template % (
+            self.buttons.up, self.buttons.down, self.buttons.left, self.buttons.right, self.buttons.a, self.buttons.b, command)
         return formattedTemplate
-    
+
     def ProcessCommand(self):
-    # deltaHealth = self.healthP1-deserializedObject.p1.health
-    # if deltaHealth > 0:
-    #     self.healthP1=self.healthP1-deltaHealth
-    #     self.hit=True
-    # self.runner.SendData()
-        if(self.commandInQueue == 'GetState'):
+        # deltaHealth = self.healthP1-deserializedObject.p1.health
+        # if deltaHealth > 0:
+        #     self.healthP1=self.healthP1-deltaHealth
+        #     self.hit=True
+        # self.runner.SendData()
+        tempHolder = self.commandInQueue
+        self.commandInQueue = None
+        if(tempHolder == 'GetState'):
             pass
-        if(self.commandInQueue == 'SendState'):
-            return SendStateToEmulator('buttons')
-        return SendIdle()
+        if(tempHolder == 'SendState'):
+            return self.SendStateToEmulator('buttons')
+        return self.SendIdle()
 
     def run(self):
         # Wait for a connection
         print('waiting for a connection')
-        counter=0
         connection, client_address = self.sock.accept()
-
+        msg = None
         try:
             print('connection from %s' % client_address[0])
-            counter=0
-            frameSkip=0
             while True:
                 data = connection.recv(1024).decode()
                 if data:
-                    frameCounter+=1
-                    if(frameCounter == 5000):
-                        frameCounter = 0
-
-                    if(frameCounter % 5)!=0:
-                        # envia el ultimo mensaje 5 veces
-                        print('received "%s"' % data)
+                    if(self.resendCommand == True):
+                        self.frameCounter += 1
+                        if(self.frameCounter == 5):
+                            self.frameCounter = 0
+                            self.resendCommand = False
                     else:
-                        msg = SendIdle()
+                        msg = self.SendIdle()
                         if(self.commandInQueue != None):
                             Payload(data)
-                            msg=ProcessCommand()
+                            msg = self.ProcessCommand()
 
                     connection.sendall(msg.encode('utf-8'))
                     #  if ((counter % 150) == 0 ) or (frameSkip < 6 and frameSkip > 0):
@@ -110,13 +112,13 @@ class BizHawkServer(threading.Thread):
                     #  else:
                     #      commandType="false"
                     #  formattedTemplate = template % (holdingUp,pressed,pressed,commandType)
-                    #  
+                    #
 
                 else:
                     break
 
             print('sending data back to the client')
-            
+
             connection.close()
         finally:
             # Clean up the connection
