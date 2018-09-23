@@ -25,6 +25,7 @@ class BizHawkServer(threading.Thread):
     resendCommand = False
     msg = None
     commandSent = False
+    publicState=None
 
     def __init__(self, runner: RunWrapper):
         threading.Thread.__init__(self)
@@ -46,13 +47,15 @@ class BizHawkServer(threading.Thread):
             False, False, False, False, False, False, 'processing')
         return formattedTemplate
 
-    def SendCommandToEmulator(self)->str:
+    def SendCommandToEmulator(self, repeat)->str:
         formattedTemplate = self.template % (
         self.buttons['up'], self.buttons['down'], self.buttons['left'], self.buttons['right'], self.buttons['a'], self.buttons['b'], self.commandInQueue)
         self.commandSent = True
+        if(repeat==True):
+            self.resendCommand=True
         return formattedTemplate
 
-    def ProcessCommand(self):
+    def ProcessCommand(self,object):
         # deltaHealth = self.healthP1-deserializedObject.p1.health
         # if deltaHealth > 0:
         #     self.healthP1=self.healthP1-deltaHealth
@@ -60,9 +63,12 @@ class BizHawkServer(threading.Thread):
         # self.runner.SendData()
         tempHolder = self.commandInQueue
         if(tempHolder == 'GetState'):
-            pass
-        elif(tempHolder != None):
-            return self.SendCommandToEmulator()
+            self.publicState=object
+            return self.msg
+        elif(tempHolder =='reset'):
+            return self.SendCommandToEmulator(False)
+        elif(tempHolder == 'buttons'):
+            return self.SendCommandToEmulator(True)
 
     def run(self):
         # Wait for a connection
@@ -82,31 +88,15 @@ class BizHawkServer(threading.Thread):
                     else:
                         msg = self.SendIdle()
                         if(self.commandInQueue != None):
-                            Payload(data)
-                            msg = self.ProcessCommand()
-
+                            state=Payload(data)
+                            msg = self.ProcessCommand(state)
+                    if(msg==None):
+                        msg=self.SendIdle()
                     connection.sendall(msg.encode('utf-8'))
-                    if(self.commandInQueue != None and self.commandSent == True):
+                    if(self.commandInQueue != None and self.commandSent == True and
+                    self.resendCommand == False):
                         self.commandInQueue = None
                         self.commandSent = False
-                    #  if ((counter % 150) == 0 ) or (frameSkip < 6 and frameSkip > 0):
-                    #      pressed="true"
-                    #      holdingUp="false"
-                    #      frameSkip=frameSkip+1
-                    #      counter=0
-                    #  else:
-                    #      pressed="false"
-                    #      frameSkip=0
-                    #      holdingUp="true"
-                    #  deserializedObject = Payload(data)
-                    #  print('received "%s"' % data)
-                    #  if deserializedObject.round_over == True:
-                    #     commandType="reset"
-                    #  else:
-                    #      commandType="false"
-                    #  formattedTemplate = template % (holdingUp,pressed,pressed,commandType)
-                    #
-
                 else:
                     break
 

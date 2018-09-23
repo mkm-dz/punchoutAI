@@ -29,6 +29,30 @@ class Program:
                    'a': a,
                    'b': b}
         return buttons
+    
+    def sendCommandAndSpin(self, command:str):
+        self.server.commandInQueue=command
+        while(self.server.commandInQueue != None):
+            pass
+
+    def massageAction(self, action):
+        tempCommands = self.SetButtons(False,False,False,False,False,False)
+
+        if(action[0] == 1):
+            tempCommands['up'] = True
+        elif(action[0] == 2):
+            tempCommands['right'] = True
+        elif(action[0] == 3):
+            tempCommands['down'] = True
+        elif(action[0] == 4):
+            tempCommands['left'] = True
+
+        if(action[1] == 1):
+            tempCommands['a'] = True
+        elif(action[1] == 2):
+            tempCommands['b'] = True
+
+        return tempCommands
 
     def run(self):
         self.runner = RunWrapper()
@@ -36,20 +60,21 @@ class Program:
         self.server.start()
         try:
             for index_episode in range(self.episodes):
-                state = self.env.reset()
                 self.server.buttons = self.SetButtons(
                     False, False, False, False, False, False)
-                self.server.commandInQueue="reset"
-                while(self.server.commandInQueue != None):
-                    pass
-
+                self.sendCommandAndSpin('reset')
+                self.sendCommandAndSpin('GetState')
+                self.env.setState(self.server.publicState)
+                self.server.publicState=None
+                state=self.env.reset()
                 state = np.reshape(state, [1, self.state_size])
 
                 done = False
                 index = 0
                 while not done:
                     action = self.agent.act(state)
-
+                    self.server.buttons = self.massageAction(action)
+                    self.sendCommandAndSpin('buttons')
                     next_state, reward, done, _ = self.env.step(action)
                     next_state = np.reshape(next_state, [1, self.state_size])
                     self.agent.remember(
