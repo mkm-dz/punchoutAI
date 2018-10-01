@@ -2,10 +2,10 @@ import gym
 import punchout_ai
 import os
 import numpy as np
-import threading
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
-from classes.runner import RunWrapper
+from classes.bizhawkClient import BizHawkClient
 from classes.Agent import Agent
 
 
@@ -18,8 +18,7 @@ class Program:
         self.state_size = self.env.observation_space.n
         self.action_size = self.env.action_space.n
         self.agent = Agent(self.state_size, self.action_size)
-        self.runner = None
-        self.server = None
+        self.server = BizHawkServer()
 
     def SetButtons(self, up, down, left, right, a, b):
         buttons = {'up': up,
@@ -31,9 +30,17 @@ class Program:
         return buttons
     
     def sendCommandAndSpin(self, command:str):
-        self.server.commandInQueue=command
-        while(self.server.commandInQueue != None):
+        client = BizHawkClient()
+        client.buttons = self.SetButtons(
+                    False, False, False, False, False, False)
+        client.Send(command)
+
+    def WaitForServer(self) -> str:
+        while(self.server.publicState == None):
             pass
+        tempState = self.server.publicState
+        self.server.publicState = None
+        return tempState
 
     def massageAction(self, action):
         tempCommands = self.SetButtons(False,False,False,False,False,False)
@@ -55,17 +62,16 @@ class Program:
         return tempCommands
 
     def run(self):
-        self.runner = RunWrapper()
-        self.server = BizHawkServer(self.runner)
         self.server.start()
+        while(self.server.ready == False):
+            pass
         try:
             for index_episode in range(self.episodes):
-                self.server.buttons = self.SetButtons(
-                    False, False, False, False, False, False)
                 self.sendCommandAndSpin('reset')
-                self.sendCommandAndSpin('GetState')
-                self.env.setState(self.server.publicState)
-                self.server.publicState=None
+                self.WaitForServer()
+                self.sendCommandAndSpin('get_state')
+                currentState = self.WaitForServer()
+                self.env.setState(currentState)
                 state=self.env.reset()
                 state = np.reshape(state, [1, self.state_size])
 
@@ -75,6 +81,7 @@ class Program:
                     action = self.agent.act(state)
                     self.server.buttons = self.massageAction(action)
                     self.sendCommandAndSpin('buttons')
+                    self.WaitForServer()
                     next_state, reward, done, _ = self.env.step(action)
                     next_state = np.reshape(next_state, [1, self.state_size])
                     self.agent.remember(

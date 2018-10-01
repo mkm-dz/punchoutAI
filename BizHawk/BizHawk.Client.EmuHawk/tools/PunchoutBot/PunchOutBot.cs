@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using System.Threading;
 
 
 using System.Windows.Forms;
@@ -16,14 +17,18 @@ using BizHawk.Client.EmuHawk.ToolExtensions;
 
 using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
+using System.Threading.Tasks;
 
 namespace BizHawk.Client.EmuHawk
 {
-	public partial class PunchOutBot : ToolFormBase , IToolFormAutoConfig
+	public partial class PunchOutBot : ToolFormBase, IToolFormAutoConfig
 	{
 		private const string DialogTitle = "PunchOut Bot";
 
 		private string _currentFileName = "";
+		private const string serverAddress = "127.0.0.1";
+		private const int clientPort = 9999;
+		private const int serverPort = 9998;
 
 		private string CurrentFileName
 		{
@@ -45,12 +50,13 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private bool _isBotting = false;
-
+		private object commandSync = new object();
+		private ControllerCommand commandInQueue = null;
 
 		private bool _replayMode = false;
 		private string _lastRom = "";
 
-		private bool _dontUpdateValues = false;
+		private bool commandInQueueAvailable = false;
 
 		private MemoryDomain _currentDomain;
 		private bool _bigEndian;
@@ -69,8 +75,7 @@ namespace BizHawk.Client.EmuHawk
 		public bool game_in_progress = false;
 
 		private ILogEntryGenerator _logGenerator;
-		private TcpClient client;
-		private TcpClient client_p2;
+		private TcpServer server;
 
 		#region Services and Settings
 
@@ -106,37 +111,28 @@ namespace BizHawk.Client.EmuHawk
 		{
 			return new TcpClient(IP, port);
 		}
-		
-		private ControllerCommand SendEmulatorGameStateToController(TcpClient cl)
+
+		private Task CreateTcpServer(string IP, int port)
 		{
+			server = new TcpServer(IP, port);
+			server.onMessageReceived += TcpServer_onMessageReceived;
+			return Task.Factory.StartNew(() =>
+			{
+				server.LoopClients();
+			});
+		}
+
+		private void TcpServer_onMessageReceived(string message)
+		{
+			if (string.IsNullOrEmpty(message))
+				return;
+
 			ControllerCommand cc = new ControllerCommand();
 			try
 			{
-
-				
-				NetworkStream stream = cl.GetStream();
-				byte[] bytes = new byte[1024];
-				// Encode the data string into a byte array. 
-				GameState gs = GetCurrentState();
-				string data = JsonConvert.SerializeObject(gs);
-
-				byte[] msg = Encoding.ASCII.GetBytes(data);
-				stream.Write(msg, 0, msg.Length);
-
-				StringBuilder myCompleteMessage = new StringBuilder();
-				if (stream.CanRead)
-				{
-					byte[] myReadBuffer = new byte[1024];
-					int numberOfBytesRead = 0;
-					// Incoming message may be larger than the buffer size.
-					do
-					{
-						numberOfBytesRead = stream.Read(myReadBuffer, 0, myReadBuffer.Length);
-						myCompleteMessage.AppendFormat("{0}", Encoding.ASCII.GetString(myReadBuffer, 0, numberOfBytesRead));
-					}
-					while (stream.DataAvailable);
-				}
-				cc = JsonConvert.DeserializeObject<ControllerCommand>(myCompleteMessage.ToString().ToLower());
+				cc = JsonConvert.DeserializeObject<ControllerCommand>(message.ToString().ToLower());
+				this.commandInQueue = cc;
+				this.commandInQueueAvailable = true;
 			}
 			catch (ArgumentNullException ane)
 			{
@@ -150,9 +146,8 @@ namespace BizHawk.Client.EmuHawk
 			{
 				cc.type = "__err__" + e.ToString();
 			}
-			return cc;
 		}
-		
+
 		#endregion
 
 		#region Initialize
@@ -161,7 +156,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			InitializeComponent();
 			Text = DialogTitle;
-			Settings = new PunchOutBotSettings();		
+			Settings = new PunchOutBotSettings();
 		}
 
 		private void PunchOutBot_Load(object sender, EventArgs e)
@@ -214,7 +209,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private bool IsRoundOver()
 		{
-			return GetHealthP1() <= 0|| GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
+			return GetHealthP1() <= 0 || GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
 		}
 
 		private string GetRoundResult()
@@ -253,8 +248,8 @@ namespace BizHawk.Client.EmuHawk
 			}
 			return buttons;
 		}
-		
-		public void SetJoypadButtons(Dictionary<string,bool> buttons, int? controller = null)
+
+		public void SetJoypadButtons(Dictionary<string, bool> buttons, int? controller = null)
 		{
 			try
 			{
@@ -314,8 +309,8 @@ namespace BizHawk.Client.EmuHawk
 			catch
 			{
 				/*Eat it*/
-	}
-}
+			}
+		}
 		private class PlayerState
 		{
 			public PlayerState()
@@ -326,7 +321,7 @@ namespace BizHawk.Client.EmuHawk
 
 			public Dictionary<string, bool> buttons { get; set; }
 			public bool InMove { get; set; }
-			public int action{ get; set; }
+			public int action { get; set; }
 
 
 		}
@@ -498,10 +493,10 @@ namespace BizHawk.Client.EmuHawk
 
 
 
-	
+
 		private void ClearStatsContextMenuItem_Click(object sender, EventArgs e)
 		{
-		
+
 		}
 
 		#endregion
@@ -518,8 +513,8 @@ namespace BizHawk.Client.EmuHawk
 
 		}
 
-		
-		
+
+
 
 		#endregion
 
@@ -536,7 +531,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private bool LoadBotFile(string path)
 		{
-	
+
 			return true;
 		}
 
@@ -580,117 +575,119 @@ namespace BizHawk.Client.EmuHawk
 
 		private void Update(bool fast)
 		{
-			if (_dontUpdateValues)
+			if (!commandInQueueAvailable)
 			{
 				return;
 			}
 
-			if (_isBotting)
+			lock (this.commandSync)
 			{
-
-				if (IsRoundOver() && game_in_progress)
+				if (_isBotting)
 				{
-					_post_round_wait_time--;
-					game_in_progress = false;
-					_totalGames = _totalGames + 1;
-					if (GetRoundResult() == "P1")
+					try
 					{
-						_wins = _wins + 1;
-						_lastResult = "P1 Win";
-						_p2_losses = _p2_losses + 1;
+						if (IsRoundOver() && game_in_progress)
+						{
+							_post_round_wait_time--;
+							game_in_progress = false;
+							_totalGames = _totalGames + 1;
+							if (GetRoundResult() == "P1")
+							{
+								_wins = _wins + 1;
+								_lastResult = "P1 Win";
+								_p2_losses = _p2_losses + 1;
 
+							}
+							else
+							{
+								_losses = _losses + 1;
+								_lastResult = "P1 Loss";
+								_p2_wins = _p2_wins + 1;
+							}
+
+							_winsToLosses = (float)_wins / _totalGames;
+							_p2_winsToLosses = (float)_p2_wins / _totalGames;
+							GlobalWin.OSD.ClearGUIText();
+							GlobalWin.OSD.AddMessageForTime("Game #: " + _totalGames + " | Last Result: " + _lastResult + " | P1 Wins-Losses: " + _wins + "-" + _losses + " (" + _winsToLosses + ") | P2 Wins-Losses: " + _p2_wins + "-" + _p2_losses + " (" + _p2_winsToLosses + ")", _OSDMessageTimeInSeconds);
+						}
+						if (_post_round_wait_time < Global.Config.round_over_delay)
+						{
+							if (_post_round_wait_time < 1)
+							{
+								_post_round_wait_time = Global.Config.round_over_delay;
+								if (Global.Config.pause_after_round)
+								{
+									GlobalWin.MainForm.PauseEmulator();
+									return;
+								}
+							}
+							else
+							{
+								_post_round_wait_time--;
+								return;
+							}
+						}
+
+						string command_type = this.commandInQueue.type;
+						if (command_type == "reset")
+						{
+							this.commandInQueueAvailable = false;
+							GlobalWin.MainForm.LoadState(this.commandInQueue.savegamepath, Path.GetFileName(this.commandInQueue.savegamepath));
+							game_in_progress = true;
+						}
+						else
+						{
+							SetJoypadButtons(this.commandInQueue.p1, 1);
+						}
 					}
-					else
+					finally
 					{
-						_losses = _losses + 1;
-						_lastResult = "P1 Loss";
-						_p2_wins = _p2_wins + 1;
+						GameState gs = GetCurrentState();
+						this.SendEmulatorGameStateToController(gs);
+						this.commandInQueueAvailable = false;
 					}
 
-					_winsToLosses = (float)_wins / _totalGames;
-					_p2_winsToLosses = (float)_p2_wins / _totalGames;
-					GlobalWin.OSD.ClearGUIText();
-					GlobalWin.OSD.AddMessageForTime("Game #: " + _totalGames + " | Last Result: " + _lastResult + " | P1 Wins-Losses: " + _wins + "-" + _losses + " (" + _winsToLosses + ") | P2 Wins-Losses: " + _p2_wins + "-" + _p2_losses + " (" + _p2_winsToLosses + ")", _OSDMessageTimeInSeconds);
 				}
-				if (_post_round_wait_time < Global.Config.round_over_delay)
-				{
-					if (_post_round_wait_time < 1)
-					{
-						_post_round_wait_time = Global.Config.round_over_delay;
-						if (Global.Config.pause_after_round)
-						{
-							GlobalWin.MainForm.PauseEmulator();
-							return;
-						}
-					}
-					else
-					{
-						_post_round_wait_time--;
-						return;
-					}
-				}
-
-
-				string command_type = "";
-				do
-				{
-					// send over the current game state
-					ControllerCommand command = SendEmulatorGameStateToController(this.client);
-					ControllerCommand command_p2;
-
-					command_type = command.type;
-
-					if (Global.Config.use_two_controllers)
-					{
-						do
-						{
-							command_p2 = SendEmulatorGameStateToController(this.client_p2);
-							//Console.WriteLine("p1 command: "  + command.type + "p2 command: "  + command_p2.type);
-							// send the game state to the controller
-							// if the commands don't match, wait until they do.
-						} while (command_p2.type != command_type);
-						// if we get a buttons command, replace the buttons of first emulator's set for it's p2 (which
-						// is null) with the buttons we want to actually play from this emulator's set of buttons. 
-						// we do this so we only need one command object after this code block.
-						if (command_type == "buttons")
-						{
-							command.p2 = command_p2.p2;
-						}
-					
-					}
-
-
-					// get a command back
-					// act on the command
-					if (command_type == "reset")
-					{
-						GlobalWin.MainForm.LoadState(command.savegamepath, Path.GetFileName(command.savegamepath));
-						game_in_progress = true;
-					}
-					else if (command_type == "processing")
-					{
-						// just do nothing, we're waiting for feedback from the controller.
-						// XXX how do we tell the emulator to not advance the frame?
-
-					}
-					else
-					{
-						SetJoypadButtons(command.p1, 1);
-						if (Global.Config.use_two_controllers)
-						{
-							SetJoypadButtons(command.p2, 2);
-							
-						}
-					}
-				} while (command_type == "processing");
-
-
-
-
-
-				// press the buttons if need be
-				//PressButtons();
 			}
+		}
+
+		private ControllerCommand SendEmulatorGameStateToController(GameState state)
+		{
+			ControllerCommand cc = new ControllerCommand();
+			try
+			{
+				TcpClient cl = new TcpClient(PunchOutBot.serverAddress, PunchOutBot.clientPort);
+				Console.WriteLine("*****Connected, no sending command");
+				NetworkStream stream = cl.GetStream();
+				byte[] bytes = new byte[1024];
+				string data = JsonConvert.SerializeObject(state);
+
+				byte[] msg = Encoding.ASCII.GetBytes(data);
+				stream.Write(msg, 0, msg.Length);
+			}
+			catch (ArgumentNullException ane)
+			{
+				cc.type = "__err__" + ane.ToString();
+			}
+			catch (SocketException se)
+			{
+				if(se.ErrorCode == 10061)
+				{
+					Thread.Sleep(300);
+					Console.WriteLine("*****Retrying send command");
+					return this.SendEmulatorGameStateToController(state);
+				}
+				cc.type = "__err__" + se.ToString();
+			}
+			catch (Exception e)
+			{
+				cc.type = "__err__" + e.ToString();
+			}
+			finally
+			{
+				
+			}
+			return cc;
 		}
 
 
@@ -705,16 +702,13 @@ namespace BizHawk.Client.EmuHawk
 			_isBotting = true;
 			RunBtn.Visible = false;
 			StopBtn.Visible = true;
-			this.client = CreateTCPClient(Global.Config.controller_ip, Global.Config.controller_port);
-			if (Global.Config.use_two_controllers)
-			{
-				this.client_p2 = CreateTCPClient(Global.Config.controller_ip_p2, Global.Config.controller_port_p2);
-			}
+			CreateTcpServer(PunchOutBot.serverAddress,PunchOutBot.serverPort);
 
 			Global.Config.SoundEnabled = false;
 			GlobalWin.MainForm.UnpauseEmulator();
 			SetMaxSpeed();
-			if (Global.Config.emulator_speed_percent != 6399) {
+			if (Global.Config.emulator_speed_percent != 6399)
+			{
 				SetNormalSpeed();
 			}
 			GlobalWin.MainForm.ClickSpeedItem(Global.Config.emulator_speed_percent);
@@ -734,7 +728,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private bool CanStart()
 		{
-		
+
 
 			return true;
 		}
@@ -744,8 +738,8 @@ namespace BizHawk.Client.EmuHawk
 			RunBtn.Visible = true;
 			StopBtn.Visible = false;
 			_isBotting = false;
-	
-			
+
+
 
 			GlobalWin.MainForm.PauseEmulator();
 			SetNormalSpeed();
@@ -781,9 +775,63 @@ namespace BizHawk.Client.EmuHawk
 		{
 			GlobalWin.MainForm.Throttle();
 		}
+	}
 
+	// Taken from http://www.mikeadev.net/2012/07/multi-threaded-tcp-server-in-csharp/
+	class TcpServer
+	{
+		private TcpListener _server;
+		public string commandInQueue = null;
+		public Boolean commandInQueueAvailable = false;
 
-		
+		public delegate void MessageReceivedHandler(string message);
+		public event MessageReceivedHandler onMessageReceived;
 
+		public delegate void NotifyDestroy(TcpServer server);
+		public event NotifyDestroy onDestroy;
+
+		public TcpServer(string address, int port)
+		{
+			_server = new TcpListener(IPAddress.Parse(address), port);
+			_server.Start();
+		}
+
+		public void LoopClients()
+		{
+			while (true)
+			{
+				// wait for client connection
+				TcpClient newClient = _server.AcceptTcpClient();
+
+				// client found.
+				// create a thread to handle communication
+				HandleClient(newClient);
+			}
+		}
+
+		public void HandleClient(object obj)
+		{
+			// retrieve client from parameter passed to thread
+			TcpClient client = (TcpClient)obj;
+
+			// sets two streams
+			StreamReader sReader = new StreamReader(client.GetStream(), Encoding.ASCII);
+
+			// you could use the NetworkStream to read and write, 
+			// but there is no forcing flush, even when requested
+
+			StringBuilder sData = new StringBuilder();
+
+			while (client.Available > 0)
+			{
+				// reads from stream
+				sData.Append(sReader.ReadLine());
+			}
+
+			// shows content on the console.
+			Console.WriteLine("Client &gt; " + sData);
+			this.onMessageReceived(sData.ToString());
+		}
 	}
 }
+
