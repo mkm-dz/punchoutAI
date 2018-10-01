@@ -114,11 +114,12 @@ namespace BizHawk.Client.EmuHawk
 
 		private Task CreateTcpServer(string IP, int port)
 		{
-			server = new TcpServer(IP, port);
-			server.onMessageReceived += TcpServer_onMessageReceived;
+			this.server = new TcpServer(IP, port);
+			this.server.onMessageReceived += TcpServer_onMessageReceived;
+
 			return Task.Factory.StartNew(() =>
 			{
-				server.LoopClients();
+				this.server.LoopClients();
 			});
 		}
 
@@ -632,38 +633,43 @@ namespace BizHawk.Client.EmuHawk
 						if (command_type == "reset")
 						{
 							this.commandInQueueAvailable = false;
+							GameState gs = GetCurrentState();
+							this.SendEmulatorGameStateToController(gs);
 							GlobalWin.MainForm.LoadState(this.commandInQueue.savegamepath, Path.GetFileName(this.commandInQueue.savegamepath));
 							game_in_progress = true;
 						}
 						else
 						{
 							SetJoypadButtons(this.commandInQueue.p1, 1);
+							GameState gs = GetCurrentState();
+							this.SendEmulatorGameStateToController(gs);
+							this.commandInQueueAvailable = false;
 						}
 					}
-					finally
+					catch (Exception e)
 					{
-						GameState gs = GetCurrentState();
-						this.SendEmulatorGameStateToController(gs);
-						this.commandInQueueAvailable = false;
+						throw e;
 					}
-
 				}
 			}
 		}
 
-		private ControllerCommand SendEmulatorGameStateToController(GameState state)
+		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state)
 		{
 			ControllerCommand cc = new ControllerCommand();
+			TcpClient cl = null;
 			try
 			{
-				TcpClient cl = new TcpClient(PunchOutBot.serverAddress, PunchOutBot.clientPort);
+				cl = new TcpClient(PunchOutBot.serverAddress, PunchOutBot.clientPort);
 				Console.WriteLine("*****Connected, no sending command");
 				NetworkStream stream = cl.GetStream();
 				byte[] bytes = new byte[1024];
 				string data = JsonConvert.SerializeObject(state);
 
-				byte[] msg = Encoding.ASCII.GetBytes(data);
-				stream.Write(msg, 0, msg.Length);
+				byte[] msg = Encoding.UTF8.GetBytes(data);
+				await stream.WriteAsync(msg, 0, msg.Length);
+
+
 			}
 			catch (ArgumentNullException ane)
 			{
@@ -675,7 +681,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Thread.Sleep(300);
 					Console.WriteLine("*****Retrying send command");
-					return this.SendEmulatorGameStateToController(state);
+					return await this.SendEmulatorGameStateToController(state);
 				}
 				cc.type = "__err__" + se.ToString();
 			}
@@ -685,7 +691,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			finally
 			{
-				
+				cl.Close();
 			}
 			return cc;
 		}
@@ -735,6 +741,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void StopBot()
 		{
+			this.server.Stop();
 			RunBtn.Visible = true;
 			StopBtn.Visible = false;
 			_isBotting = false;
@@ -815,7 +822,7 @@ namespace BizHawk.Client.EmuHawk
 			TcpClient client = (TcpClient)obj;
 
 			// sets two streams
-			StreamReader sReader = new StreamReader(client.GetStream(), Encoding.ASCII);
+			StreamReader sReader = new StreamReader(client.GetStream(), Encoding.UTF8);
 
 			// you could use the NetworkStream to read and write, 
 			// but there is no forcing flush, even when requested
@@ -831,6 +838,11 @@ namespace BizHawk.Client.EmuHawk
 			// shows content on the console.
 			Console.WriteLine("Client &gt; " + sData);
 			this.onMessageReceived(sData.ToString());
+		}
+
+		public void Stop()
+		{
+			this._server.Stop();
 		}
 	}
 }

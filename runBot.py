@@ -2,6 +2,7 @@ import gym
 import punchout_ai
 import os
 import numpy as np
+import time
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
@@ -36,8 +37,9 @@ class Program:
         client.Send(command)
 
     def WaitForServer(self) -> str:
-        while(self.server.publicState == None):
-            pass
+        if(self.server.publicState == None):
+            time.sleep(1)
+            return self.WaitForServer()
         tempState = self.server.publicState
         self.server.publicState = None
         return tempState
