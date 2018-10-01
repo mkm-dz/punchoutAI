@@ -219,16 +219,19 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (GetHealthP2() > 0)
 				{
-					return "P2";
+					// P2
+					return "2";
 				}
 				else
 				{
-					return "P1";
+					// P1
+					return "1";
 				}
 			}
 			else
 			{
-				return "NOT_OVER";
+				// NOT OVER
+				return "3";
 			}
 		}
 
@@ -611,23 +614,23 @@ namespace BizHawk.Client.EmuHawk
 							GlobalWin.OSD.ClearGUIText();
 							GlobalWin.OSD.AddMessageForTime("Game #: " + _totalGames + " | Last Result: " + _lastResult + " | P1 Wins-Losses: " + _wins + "-" + _losses + " (" + _winsToLosses + ") | P2 Wins-Losses: " + _p2_wins + "-" + _p2_losses + " (" + _p2_winsToLosses + ")", _OSDMessageTimeInSeconds);
 						}
-						if (_post_round_wait_time < Global.Config.round_over_delay)
-						{
-							if (_post_round_wait_time < 1)
-							{
-								_post_round_wait_time = Global.Config.round_over_delay;
-								if (Global.Config.pause_after_round)
-								{
-									GlobalWin.MainForm.PauseEmulator();
-									return;
-								}
-							}
-							else
-							{
-								_post_round_wait_time--;
-								return;
-							}
-						}
+						//if (_post_round_wait_time < Global.Config.round_over_delay)
+						//{
+						//	if (_post_round_wait_time < 1)
+						//	{
+						//		_post_round_wait_time = Global.Config.round_over_delay;
+						//		if (Global.Config.pause_after_round)
+						//		{
+						//			GlobalWin.MainForm.PauseEmulator();
+						//			return;
+						//		}
+						//	}
+						//	else
+						//	{
+						//		_post_round_wait_time--;
+						//		return;
+						//	}
+						//}
 
 						string command_type = this.commandInQueue.type;
 						if (command_type == "reset")
@@ -807,12 +810,19 @@ namespace BizHawk.Client.EmuHawk
 		{
 			while (true)
 			{
-				// wait for client connection
-				TcpClient newClient = _server.AcceptTcpClient();
+				try
+				{
+					// wait for client connection
+					TcpClient newClient = _server.AcceptTcpClient();
 
-				// client found.
-				// create a thread to handle communication
-				HandleClient(newClient);
+					// client found.
+					// create a thread to handle communication
+					HandleClient(newClient);
+				}
+				catch(Exception e)
+				{
+					throw e;
+				}
 			}
 		}
 
@@ -829,11 +839,12 @@ namespace BizHawk.Client.EmuHawk
 
 			StringBuilder sData = new StringBuilder();
 
-			while (client.Available > 0)
+			do
 			{
 				// reads from stream
 				sData.Append(sReader.ReadLine());
 			}
+			while (client.Available > 0);
 
 			// shows content on the console.
 			Console.WriteLine("Client &gt; " + sData);

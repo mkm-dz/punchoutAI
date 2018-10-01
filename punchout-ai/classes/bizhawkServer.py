@@ -26,12 +26,10 @@ class BizHawkServer(threading.Thread):
         self.sock.bind(server_address)
 
         # Listen for incoming connections
-        self.sock.listen(3)
+        self.sock.listen(10)
 
     def listenToClient(self, client, address):
         while True:
-            #try:
-            print('connection from %s' % address[0])
             data = client.recv(1024)
             if data:
                 state=Payload(data.decode())
@@ -46,6 +44,7 @@ class BizHawkServer(threading.Thread):
         self.ready = True
         while True:
             client, address = self.sock.accept()
+            print('connection from %s' % address[0])
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
 

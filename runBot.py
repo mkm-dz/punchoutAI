@@ -30,16 +30,15 @@ class Program:
                    'b': b}
         return buttons
     
-    def sendCommandAndSpin(self, command:str):
+    def sendCommand(self, command:str):
         client = BizHawkClient()
         client.buttons = self.SetButtons(
                     False, False, False, False, False, False)
         client.Send(command)
 
     def WaitForServer(self) -> str:
-        if(self.server.publicState == None):
-            time.sleep(1)
-            return self.WaitForServer()
+        while(self.server.publicState == None):
+            pass
         tempState = self.server.publicState
         self.server.publicState = None
         return tempState
@@ -69,9 +68,9 @@ class Program:
             pass
         try:
             for index_episode in range(self.episodes):
-                self.sendCommandAndSpin('reset')
+                self.sendCommand('reset')
                 self.WaitForServer()
-                self.sendCommandAndSpin('get_state')
+                self.sendCommand('get_state')
                 currentState = self.WaitForServer()
                 self.env.setState(currentState)
                 state=self.env.reset()
@@ -82,7 +81,7 @@ class Program:
                 while not done:
                     action = self.agent.act(state)
                     self.server.buttons = self.massageAction(action)
-                    self.sendCommandAndSpin('buttons')
+                    self.sendCommand('buttons')
                     self.WaitForServer()
                     next_state, reward, done, _ = self.env.step(action)
                     next_state = np.reshape(next_state, [1, self.state_size])

@@ -15,7 +15,7 @@ class punchoutAIEnv(gym.Env):
         "opponent_health": spaces.Discrete(255),
         "opponent_action": spaces.Discrete(255),
         "in_move": spaces.Discrete(2),
-        "round_over": spaces.Discrete(2),
+        "round_over": spaces.Discrete(3),
         "result": spaces.Discrete(2),
     })
 
@@ -52,10 +52,10 @@ class punchoutAIEnv(gym.Env):
     
   def computeState(self):
     castedSpaces = spaces.Dict({
-        'self_health': self.lastState.p1.health,
-        'opponent_health': self.lastState.p2.health,
-        'opponent_action': self.lastState.p2.action,
-        'in_move': self.lastState.p2.InMove,
+        'self_health': self.lastState.p1['health'],
+        'opponent_health': self.lastState.p2['health'],
+        'opponent_action': self.lastState.p2['action'],
+        'in_move': self.lastState.p2['InMove'],
         'round_over': self.lastState.round_over,
         'result': self.lastState.result,
     })
@@ -70,7 +70,7 @@ class punchoutAIEnv(gym.Env):
             else:
                 raise ValueError('Should never get here')
         else:
-            return self.lastState.p1.health-self.lastState.p2.health
+            return self.lastState.p1['health']-self.lastState.p2['health']
 
   def computeDone(self):
         if(self.lastState.round_over == True):
