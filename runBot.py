@@ -22,18 +22,21 @@ class Program:
         self.server = BizHawkServer()
 
     def SetButtons(self, up, down, left, right, a, b):
-        buttons = {'up': up,
-                   'down': down,
-                   'left': left,
-                   'right': right,
-                   'a': a,
-                   'b': b}
+        buttons = {'Up': up,
+                   'Down': down,
+                   'Left': left,
+                   'Right': right,
+                   'A': a,
+                   'B': b}
         return buttons
     
-    def sendCommand(self, command:str):
+    def sendCommand(self, command:str, buttons=None):
         client = BizHawkClient()
-        client.buttons = self.SetButtons(
+        if(buttons == None):
+            client.buttons = self.SetButtons(
                     False, False, False, False, False, False)
+        else:
+            client.buttons = buttons
         client.Send(command)
 
     def WaitForServer(self) -> str:
@@ -46,19 +49,19 @@ class Program:
     def massageAction(self, action):
         tempCommands = self.SetButtons(False,False,False,False,False,False)
 
-        if(action[0] == 1):
-            tempCommands['up'] = True
-        elif(action[0] == 2):
-            tempCommands['right'] = True
-        elif(action[0] == 3):
-            tempCommands['down'] = True
-        elif(action[0] == 4):
-            tempCommands['left'] = True
-
         if(action[1] == 1):
-            tempCommands['a'] = True
+            tempCommands['Up'] = True
         elif(action[1] == 2):
-            tempCommands['b'] = True
+            tempCommands['Right'] = True
+        elif(action[1] == 3):
+            tempCommands['Down'] = True
+        elif(action[1] == 4):
+            tempCommands['Left'] = True
+
+        if(action[0] == 1):
+            tempCommands['A'] = True
+        elif(action[0] == 2):
+            tempCommands['B'] = True
 
         return tempCommands
 
@@ -79,9 +82,10 @@ class Program:
                 done = False
                 totalReward = 0
                 while not done:
+                #while True:
                     action = self.agent.act(state)
-                    self.server.buttons = self.massageAction(action)
-                    self.sendCommand('buttons')
+                    actionButtons = self.massageAction(action)
+                    self.sendCommand('buttons', actionButtons)
                     self.WaitForServer()
                     self.sendCommand('get_state')
                     currentState = self.WaitForServer()

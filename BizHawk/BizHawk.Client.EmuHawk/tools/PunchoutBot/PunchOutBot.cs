@@ -18,6 +18,7 @@ using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
 using System.Threading.Tasks;
+using System.Globalization;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -30,8 +31,10 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
-		private const int framesPerCommand = 5;
+		private const int framesPerCommand = 10;
 		private int currentFrameCounter = 0;
+		private string buttonsPressed = string.Empty;
+		private TextInfo capitalize  =  new CultureInfo("en-US", false).TextInfo;
 
 
 		private string CurrentFileName
@@ -74,7 +77,7 @@ namespace BizHawk.Client.EmuHawk
 		private float _winsToLosses = 0;
 		private float _p2_winsToLosses = 0;
 		private int _totalGames = 0;
-		private int _OSDMessageTimeInSeconds = 15;
+		private int _OSDMessageTimeInSeconds = 150;
 		private int _post_round_wait_time = 0;
 		public bool game_in_progress = false;
 
@@ -257,8 +260,9 @@ namespace BizHawk.Client.EmuHawk
 			return buttons;
 		}
 
-		public void SetJoypadButtons(Dictionary<string, bool> buttons, int? controller = null)
+		public string SetJoypadButtons(Dictionary<string, bool> buttons, int? controller = null, bool clearAll=false)
 		{
+			StringBuilder pressed = new StringBuilder();
 			try
 			{
 				foreach (var button in buttons.Keys)
@@ -267,7 +271,7 @@ namespace BizHawk.Client.EmuHawk
 					bool? theValue;
 					var theValueStr = buttons[button].ToString();
 
-					if (!string.IsNullOrWhiteSpace(theValueStr))
+					if (!string.IsNullOrWhiteSpace(theValueStr) && !clearAll)
 					{
 						if (theValueStr.ToLower() == "false")
 						{
@@ -291,7 +295,7 @@ namespace BizHawk.Client.EmuHawk
 					var toPress = button.ToString();
 					if (controller.HasValue)
 					{
-						toPress = "P" + controller + " " + button;
+						toPress = "P" + controller + " " + this.capitalize.ToTitleCase(button);
 					}
 
 					if (!invert)
@@ -299,6 +303,10 @@ namespace BizHawk.Client.EmuHawk
 						if (theValue.HasValue) // Force
 						{
 							Global.LuaAndAdaptor.SetButton(toPress, theValue.Value);
+							if (theValue.Value)
+							{
+								pressed.Append(toPress + "|");
+							}
 							Global.ActiveController.Overrides(Global.LuaAndAdaptor);
 						}
 						else // Unset
@@ -314,10 +322,12 @@ namespace BizHawk.Client.EmuHawk
 					}
 				}
 			}
-			catch
+			catch(Exception e)
 			{
+				throw;
 				/*Eat it*/
 			}
+			return pressed.ToString();
 		}
 		private class PlayerState
 		{
@@ -585,15 +595,22 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if(this.currentFrameCounter > 0 && this.currentFrameCounter <= PunchOutBot.framesPerCommand)
 			{
-				this.currentFrameCounter++;
-				SetJoypadButtons(this.commandInQueue.p1, 1);
-
-				if(this.currentFrameCounter == PunchOutBot.framesPerCommand)
+				if (this.currentFrameCounter == 1)
 				{
+					this.buttonsPressed = SetJoypadButtons(this.commandInQueue.p1, 1);
+				}
+
+				this.currentFrameCounter++;
+				if (this.currentFrameCounter == PunchOutBot.framesPerCommand)
+				{
+					SetJoypadButtons(this.commandInQueue.p1, 1, true);
 					GameState gs = GetCurrentState();
-					this.SendEmulatorGameStateToController(gs);
 					this.currentFrameCounter = 0;
 					this.commandInQueueAvailable = false;
+					GlobalWin.OSD.ClearGUIText();
+					GlobalWin.OSD.AddMessageForTime(this.buttonsPressed, _OSDMessageTimeInSeconds);
+					this.buttonsPressed = string.Empty;
+					this.SendEmulatorGameStateToController(gs);
 				}
 
 				return;
@@ -676,14 +693,14 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state)
+		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state, int retry=0)
 		{
 			ControllerCommand cc = new ControllerCommand();
 			TcpClient cl = null;
 			try
 			{
 				cl = new TcpClient(PunchOutBot.serverAddress, PunchOutBot.clientPort);
-				Console.WriteLine("*****Connected, no sending command");
+				//Console.WriteLine("*****Connected, no sending command");
 				NetworkStream stream = cl.GetStream();
 				byte[] bytes = new byte[1024];
 				string data = JsonConvert.SerializeObject(state);
@@ -699,11 +716,16 @@ namespace BizHawk.Client.EmuHawk
 			}
 			catch (SocketException se)
 			{
+				if(retry > 3)
+				{
+					throw se;
+				}
+
 				if(se.ErrorCode == 10061)
 				{
 					Thread.Sleep(300);
-					Console.WriteLine("*****Retrying send command");
-					return await this.SendEmulatorGameStateToController(state);
+					//Console.WriteLine("*****Retrying send command");
+					return await this.SendEmulatorGameStateToController(state, ++retry);
 				}
 				cc.type = "__err__" + se.ToString();
 			}
@@ -717,7 +739,6 @@ namespace BizHawk.Client.EmuHawk
 			}
 			return cc;
 		}
-
 
 		private void StartBot()
 		{
@@ -866,7 +887,7 @@ namespace BizHawk.Client.EmuHawk
 			while (client.Available > 0);
 
 			// shows content on the console.
-			Console.WriteLine("Client &gt; " + sData);
+			//Console.WriteLine("Client &gt; " + sData);
 			this.onMessageReceived(sData.ToString());
 		}
 

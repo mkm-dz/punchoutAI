@@ -28,7 +28,7 @@ class BizHawkClient():
 
     def _SendCommandToEmulator(self, command: str)->str:
         formattedTemplate = self.template % (
-            self.buttons['up'], self.buttons['down'], self.buttons['left'], self.buttons['right'], self.buttons['a'], self.buttons['b'], command)
+            self.buttons['Up'], self.buttons['Down'], self.buttons['Left'], self.buttons['Right'], self.buttons['A'], self.buttons['B'], command)
         return formattedTemplate
 
     def Send(self, command: str):
@@ -37,6 +37,7 @@ class BizHawkClient():
         self.sock.connect(self.server_address)
         if(command != None):
             msg = self._SendCommandToEmulator(command)
+            print('sending buttons: %s' % msg)
             self.sock.sendall(msg.encode('utf-8'))
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
