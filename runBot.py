@@ -18,7 +18,7 @@ class Program:
 
         self.state_size = self.env.observation_space.n
         self.action_size = self.env.action_space.n
-        self.agent = Agent(self.state_size, self.action_size)
+        self.agent = Agent(self.state_size, self.env.action_space)
         self.server = BizHawkServer()
 
     def SetButtons(self, up, down, left, right, a, b):
@@ -77,22 +77,26 @@ class Program:
                 state = np.reshape(state, [1, self.state_size])
 
                 done = False
-                index = 0
+                totalReward = 0
                 while not done:
                     action = self.agent.act(state)
                     self.server.buttons = self.massageAction(action)
                     self.sendCommand('buttons')
                     self.WaitForServer()
+                    self.sendCommand('get_state')
+                    currentState = self.WaitForServer()
+                    self.env.setState(currentState)
                     next_state, reward, done, _ = self.env.step(action)
                     next_state = np.reshape(next_state, [1, self.state_size])
                     self.agent.remember(
                         state, action, reward, next_state, done)
                     state = next_state
-                    index += 1
-                print("Episode {}# Score: {}".format(index_episode, index + 1))
+                    totalReward += reward
+                print("Episode {}# Score: {}".format(index_episode, totalReward))
                 self.agent.replay(self.sample_batch_size)
         finally:
-            self.agent.save_model()
+            pass
+            #self.agent.save_model()
 
 
 if __name__ == "__main__":

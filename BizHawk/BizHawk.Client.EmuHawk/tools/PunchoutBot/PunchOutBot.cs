@@ -30,6 +30,10 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
+		private const int framesPerCommand = 5;
+		private int currentFrameCounter = 0;
+
+
 		private string CurrentFileName
 		{
 			get { return _currentFileName; }
@@ -579,6 +583,24 @@ namespace BizHawk.Client.EmuHawk
 
 		private void Update(bool fast)
 		{
+			if(this.currentFrameCounter > 0 && this.currentFrameCounter <= PunchOutBot.framesPerCommand)
+			{
+				this.currentFrameCounter++;
+				SetJoypadButtons(this.commandInQueue.p1, 1);
+
+				if(this.currentFrameCounter == PunchOutBot.framesPerCommand)
+				{
+					GameState gs = GetCurrentState();
+					this.SendEmulatorGameStateToController(gs);
+					this.currentFrameCounter = 0;
+					this.commandInQueueAvailable = false;
+				}
+
+				return;
+
+
+			}
+
 			if (!commandInQueueAvailable)
 			{
 				return;
@@ -643,10 +665,7 @@ namespace BizHawk.Client.EmuHawk
 						}
 						else
 						{
-							SetJoypadButtons(this.commandInQueue.p1, 1);
-							GameState gs = GetCurrentState();
-							this.SendEmulatorGameStateToController(gs);
-							this.commandInQueueAvailable = false;
+							this.currentFrameCounter = 1;
 						}
 					}
 					catch (Exception e)

@@ -29,7 +29,9 @@ class punchoutAIEnv(gym.Env):
     ])
 
     self.observation_space.n = len(self.observation_space.spaces)
-    self.action_space.n = len(self.observation_space.spaces)
+    self.action_space.n = len(self.action_space.spaces)
+    #self.action_space.n = (self.action_space.spaces[0].n,
+    #    self.action_space.spaces[1].n)
 
   def step(self, action):
     self._observation = self.computeState()
@@ -63,9 +65,9 @@ class punchoutAIEnv(gym.Env):
 
   def computeReward(self):
         if(self.lastState.round_over == True):
-            if(self.lastState.result == 'P1'):
+            if(self.lastState.result == '1'):
                 return 100
-            elif(self.lastState.result == 'P2'):
+            elif(self.lastState.result == '2'):
                 return -100
             else:
                 raise ValueError('Should never get here')

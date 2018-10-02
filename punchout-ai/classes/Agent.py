@@ -10,10 +10,11 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 
 class Agent():
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_space):
         self.weight_backup = "cartpole_weight.h5"
         self.state_size = state_size
-        self.action_size = action_size
+        self.action_dim = action_space.n
+        self.action_space = action_space
         self.memory = deque(maxlen=2000)
         self.learning_rate = 0.001
         self.gamma = 0.95
@@ -27,7 +28,7 @@ class Agent():
         model = Sequential()
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
+        model.add(Dense(self.action_dim, activation='linear'))
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         if os.path.isfile(self.weight_backup):
@@ -40,7 +41,10 @@ class Agent():
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:
-            return random.randrange(self.action_size)
+            result={}
+            for index in range(0,self.action_dim):
+                result[index]=random.randint(0, self.action_space.spaces[index].n)
+            return result
         act_values = self.brain.predict(state)
         return np.argmax(act_values[0])
 
