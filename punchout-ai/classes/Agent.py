@@ -81,19 +81,20 @@ class Agent():
             return
         sample_batch = random.sample(self.memory, sample_batch_size)
         for state, action, reward, next_state, done in sample_batch:
-            target = reward
-            if not done:
-              act_values=self.brain.predict(next_state)[0]
-              targetButton = reward + self.gamma * \
-                  act_values[0]
-              targetPad = reward + self.gamma * \
-                  act_values[1]
-
+            #   targetButton = reward + self.gamma * \
+            #       act_values[0]
+            #   targetPad = reward + self.gamma * \
+            #       act_values[1]
+            act_values=self.brain.predict(next_state)[0]
             casted_action={}
-            casted_action[0]=targetButton
-            casted_action[1]=targetPad
+            casted_action[0]=act_values[0]
+            casted_action[1]=act_values[1]
             calculatedValues=self.calculateAction(casted_action)
             target_f = self.brain.predict(state)
+
+            if done:
+                calculatedValues[0]=action[0]
+                calculatedValues[1]=action[1]
             target_f[0][0] = calculatedValues[0]
             target_f[0][1] = calculatedValues[1]
             self.brain.fit(state, target_f, epochs=1, verbose=0)
