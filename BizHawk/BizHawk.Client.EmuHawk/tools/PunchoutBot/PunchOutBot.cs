@@ -224,7 +224,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (this.IsRoundOver())
 			{
-				if (GetHealthP2() > 0)
+				if (this.GetHealthP2() > 0 && this.GetHealthP2() >= this.GetHealthP1())
 				{
 					// P2
 					return "2";

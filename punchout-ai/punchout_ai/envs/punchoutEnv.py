@@ -53,7 +53,9 @@ class punchoutAIEnv(gym.Env):
   def computeState(self):
     castedSpaces = spaces.Dict({
         'self_health': self.lastState.p1['health'],
-        'opponent_health': self.lastState.p2['health'],
+        # TODO: Testing a theory, is the opponent really relevant for the state or is it noise.
+        #'opponent_health': self.lastState.p2['health'],
+        'opponent_health': 0,
         'opponent_action': self.lastState.p2['action'],
         'in_move': self.lastState.p2['InMove'],
         'round_over': self.lastState.round_over,

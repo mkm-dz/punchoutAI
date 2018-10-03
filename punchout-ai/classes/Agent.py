@@ -77,15 +77,18 @@ class Agent():
 
     def replay(self, sample_batch_size):
         if len(self.memory) < sample_batch_size:
-
             return
         sample_batch = random.sample(self.memory, sample_batch_size)
+        target=None
+        casted_action={}
         for state, action, reward, next_state, done in sample_batch:
-            #   targetButton = reward + self.gamma * \
-            #       act_values[0]
-            #   targetPad = reward + self.gamma * \
-            #       act_values[1]
-            act_values=self.brain.predict(next_state)[0]
+            if(target==None):
+                target=reward
+            act_values=self.brain.predict(state)[0]
+            if(reward>=target):
+                act_values=self.brain.predict(next_state)[0]
+
+        for state, action, reward, next_state, done in sample_batch:
             casted_action={}
             casted_action[0]=act_values[0]
             casted_action[1]=act_values[1]
