@@ -8,6 +8,7 @@ from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
+from keras import backend as K
 
 class Agent():
     def __init__(self, state_size, action_space):
@@ -23,18 +24,41 @@ class Agent():
         self.exploration_decay = 0.995
         self.brain = self._build_model()
 
+    def custom_activation(self, x):
+        x = K.tanh(x)
+        return x
+
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_dim, activation='linear'))
+        model.add(Dense(self.action_dim, activation=self.custom_activation))
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         if os.path.isfile(self.weight_backup):
             model.load_weights(self.weight_backup)
             self.exploration_rate = self.exploration_min
         return model
+    
+    def massageDataPad(self, data, max_value):
+        range_size=2/(max_value)
+        pivot=-1
+        for index in range(0,(max_value)):
+            if(data>=pivot and data<=pivot+range_size):
+                return index
+            else:
+                pivot += range_size
+        return max_value-1
+
+    def calculateAction(self,data):
+        result={}
+        # 0: buttons
+        # 1: pads
+        result[0]=self.massageDataPad(data[0],self.action_space.spaces[0].n)
+        result[1]=self.massageDataPad(data[1],
+        self.action_space.spaces[1].n)
+        return result
 
     def save_model(self):
             self.brain.save(self.weight_backup)
@@ -43,10 +67,10 @@ class Agent():
         if np.random.rand() <= self.exploration_rate:
             result={}
             for index in range(0,self.action_dim):
-                result[index]=random.randint(0, self.action_space.spaces[index].n)
+                result[index]=random.randint(0, self.action_space.spaces[index].n-1)
             return result
-        act_values = self.brain.predict(state)
-        return np.argmax(act_values[0])
+        act_values = self.brain.predict(state)[0]
+        return self.calculateAction(act_values)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -59,10 +83,19 @@ class Agent():
         for state, action, reward, next_state, done in sample_batch:
             target = reward
             if not done:
-              target = reward + self.gamma * \
-                  np.amax(self.brain.predict(next_state)[0])
+              act_values=self.brain.predict(next_state)[0]
+              targetButton = reward + self.gamma * \
+                  act_values[0]
+              targetPad = reward + self.gamma * \
+                  act_values[1]
+
+            casted_action={}
+            casted_action[0]=targetButton
+            casted_action[1]=targetPad
+            calculatedValues=self.calculateAction(casted_action)
             target_f = self.brain.predict(state)
-            target_f[0][action] = target
+            target_f[0][0] = calculatedValues[0]
+            target_f[0][1] = calculatedValues[1]
             self.brain.fit(state, target_f, epochs=1, verbose=0)
 
         if self.exploration_rate > self.exploration_min:

@@ -22,16 +22,14 @@ class punchoutAIEnv(gym.Env):
     self.action_space = spaces.Tuple([
         # The first array is the lowest accepted values
         # The second is the highest accepted values
-        # [0,4] None, Up, Right, Down, Left
         # [0,2] None, A, B
-        spaces.Discrete(2),
-        spaces.Discrete(4),
+        # [0,4] None, Up, Right, Down, Left
+        spaces.Discrete(3),
+        spaces.Discrete(5),
     ])
 
     self.observation_space.n = len(self.observation_space.spaces)
     self.action_space.n = len(self.action_space.spaces)
-    #self.action_space.n = (self.action_space.spaces[0].n,
-    #    self.action_space.spaces[1].n)
 
   def step(self, action):
     self._observation = self.computeState()

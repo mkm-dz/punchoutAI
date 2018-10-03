@@ -31,7 +31,7 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
-		private const int framesPerCommand = 10;
+		private const int framesPerCommand = 20;
 		private int currentFrameCounter = 0;
 		private string buttonsPressed = string.Empty;
 		private TextInfo capitalize  =  new CultureInfo("en-US", false).TextInfo;
@@ -634,7 +634,7 @@ namespace BizHawk.Client.EmuHawk
 							_post_round_wait_time--;
 							game_in_progress = false;
 							_totalGames = _totalGames + 1;
-							if (GetRoundResult() == "P1")
+							if (GetRoundResult() == "1")
 							{
 								_wins = _wins + 1;
 								_lastResult = "P1 Win";
