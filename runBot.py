@@ -49,6 +49,11 @@ class Program:
     def massageAction(self, action):
         tempCommands = self.SetButtons(False,False,False,False,False,False)
 
+        if(action[0] == 1):
+            tempCommands['A'] = True
+        elif(action[0] == 2):
+            tempCommands['B'] = True
+
         if(action[1] == 1):
             tempCommands['Up'] = True
         elif(action[1] == 2):
@@ -57,11 +62,6 @@ class Program:
             tempCommands['Down'] = True
         elif(action[1] == 4):
             tempCommands['Left'] = True
-
-        if(action[0] == 1):
-            tempCommands['A'] = True
-        elif(action[0] == 2):
-            tempCommands['B'] = True
 
         return tempCommands
 
@@ -100,7 +100,7 @@ class Program:
                 self.agent.replay(self.sample_batch_size)
         finally:
             pass
-            #self.agent.save_model()
+            self.agent.save_model()
 
 
 if __name__ == "__main__":

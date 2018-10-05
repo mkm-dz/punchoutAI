@@ -33,7 +33,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private const int framesPerCommand = 20;
 		private int currentFrameCounter = 0;
-		private string buttonsPressed = string.Empty;
+
 		private TextInfo capitalize  =  new CultureInfo("en-US", false).TextInfo;
 
 
@@ -220,6 +220,25 @@ namespace BizHawk.Client.EmuHawk
 			return GetHealthP1() <= 0 || GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
 		}
 
+		private int GetScore()
+		{
+			byte units = _currentDomain.PeekByte(0x03E5);
+			byte tens = _currentDomain.PeekByte(0x03E4);
+			byte hundreds = _currentDomain.PeekByte(0x03E3);
+			byte thousands = _currentDomain.PeekByte(0x03E2);
+			string formatedString=string.Format("{0}{1}{2}{3}",thousands,hundreds,tens,units);
+			return Convert.ToInt32(formatedString);
+		}
+
+		private int GetHearts()
+		{
+			byte units = _currentDomain.PeekByte(0x0324);
+			byte tens = _currentDomain.PeekByte(0x0323);
+
+			string formatedString = string.Format("{0}{1}", tens, units);
+			return Convert.ToInt32(formatedString);
+		}
+
 		private string GetRoundResult()
 		{
 			if (this.IsRoundOver())
@@ -337,6 +356,10 @@ namespace BizHawk.Client.EmuHawk
 			public int character { get; set; }
 			public int health { get; set; }
 
+			public int hearts { get; set; }
+
+			public int score { get; set; }
+
 			public Dictionary<string, bool> buttons { get; set; }
 			public bool InMove { get; set; }
 			public int action { get; set; }
@@ -366,6 +389,8 @@ namespace BizHawk.Client.EmuHawk
 			p1.buttons = GetJoypadButtons(1);
 			p1.character = -1;
 			p1.InMove = false;
+			p1.hearts = this.GetHearts();
+			p1.score = this.GetScore();
 
 			p2.health = GetHealthP2();
 			p2.action = GetOpponentAction();
@@ -597,7 +622,9 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (this.currentFrameCounter == 1)
 				{
-					this.buttonsPressed = SetJoypadButtons(this.commandInQueue.p1, 1);
+					string buttonsPressed = SetJoypadButtons(this.commandInQueue.p1, 1);
+					GlobalWin.OSD.ClearGUIText();
+					GlobalWin.OSD.AddMessageForTime(buttonsPressed, _OSDMessageTimeInSeconds);
 				}
 
 				this.currentFrameCounter++;
@@ -607,15 +634,10 @@ namespace BizHawk.Client.EmuHawk
 					GameState gs = GetCurrentState();
 					this.currentFrameCounter = 0;
 					this.commandInQueueAvailable = false;
-					GlobalWin.OSD.ClearGUIText();
-					GlobalWin.OSD.AddMessageForTime(this.buttonsPressed, _OSDMessageTimeInSeconds);
-					this.buttonsPressed = string.Empty;
 					this.SendEmulatorGameStateToController(gs);
 				}
 
 				return;
-
-
 			}
 
 			if (!commandInQueueAvailable)
