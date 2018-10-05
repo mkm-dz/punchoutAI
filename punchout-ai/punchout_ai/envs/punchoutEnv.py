@@ -12,9 +12,10 @@ class punchoutAIEnv(gym.Env):
   def __init__(self):
     self._observation = []
     self.observation_space = spaces.Dict({
-        "self_health": spaces.Discrete(255),
+        "opponent_id": spaces.Discrete(255),
+        #"self_health": spaces.Discrete(255),
         "opponent_action": spaces.Discrete(255),
-        "in_move": spaces.Discrete(2),
+        "opponentTimer": spaces.Discrete(255),
         "round_over": spaces.Discrete(3),
         "hearts": spaces.Discrete(255),
         "result": spaces.Discrete(2),
@@ -54,9 +55,10 @@ class punchoutAIEnv(gym.Env):
 
   def computeState(self):
     castedSpaces = spaces.Dict({
-        'self_health': self.currentState.p1['health'],
+        'opponent_id': self.currentState.p2['character'],
+        #'self_health': self.currentState.p1['health'],
         'opponent_action': self.currentState.p2['action'],
-        'in_move': self.currentState.p2['InMove'],
+        'opponentTimer': self.currentState.p2['actionTimer'],
         'round_over': self.currentState.round_over,
         'hearts': self.currentState.p1['hearts'],
         'result': self.currentState.result,
@@ -77,7 +79,7 @@ class punchoutAIEnv(gym.Env):
     if (didMacHit > 0):
         extra+=100
         didMacHit=0
-    result = extra + (self.currentState.p1['health']-self.currentState.p2['health'])+(self.currentState.p1['hearts']*self.currentState.p1['hearts'])
+    result = extra + ((self.currentState.p1['health']-self.currentState.p2['health'])*2)+(self.currentState.p1['hearts']*3)
 
     # This can be considered the last method so we 
     # set the previousScore in here

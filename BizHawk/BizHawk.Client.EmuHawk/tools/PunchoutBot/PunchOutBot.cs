@@ -196,13 +196,9 @@ namespace BizHawk.Client.EmuHawk
 			return _currentDomain.PeekByte(0x003A);
 		}
 
-		public bool GetOpponentIsMoving()
+		public int GetOpponentActionTimer()
 		{
-			if (_currentDomain.PeekByte(0x0039) <= 1)
-			{
-				return true;
-			}
-			return false;
+			return _currentDomain.PeekByte(0x0039);
 		}
 
 		public bool IsRoundStarted()
@@ -361,8 +357,10 @@ namespace BizHawk.Client.EmuHawk
 			public int score { get; set; }
 
 			public Dictionary<string, bool> buttons { get; set; }
-			public bool InMove { get; set; }
+
 			public int action { get; set; }
+
+			public int actionTimer { get; set; }
 
 
 		}
@@ -388,15 +386,14 @@ namespace BizHawk.Client.EmuHawk
 			p1.action = 0;
 			p1.buttons = GetJoypadButtons(1);
 			p1.character = -1;
-			p1.InMove = false;
 			p1.hearts = this.GetHearts();
 			p1.score = this.GetScore();
 
 			p2.health = GetHealthP2();
 			p2.action = GetOpponentAction();
 			p2.buttons = GetJoypadButtons(2);
+			p2.actionTimer = GetOpponentActionTimer();
 			p2.character = GetOpponentId();
-			p2.InMove = GetOpponentIsMoving();
 
 
 			gs.p1 = p1;

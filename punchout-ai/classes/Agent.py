@@ -52,7 +52,7 @@ class Agent():
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         #TODO this should be calculated based on the action permutations not hardcoded.
-        model.add(Dense(15))
+        model.add(Dense(self.action_space.spaces[0].n * self.action_space.spaces[1].n))
         self.actionMap = self.createMapping()
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
@@ -104,7 +104,7 @@ class Agent():
             else:
                 Q_future = max(self.brain.predict(final_state)[0])
                 target[0][action]=reward + Q_future * self.gamma
-                self.brain.fit(initial_state, target, epochs=1,verbose=0)
+            self.brain.fit(initial_state, target, epochs=1,verbose=0)
 
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay
