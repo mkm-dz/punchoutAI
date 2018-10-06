@@ -69,15 +69,15 @@ class punchoutAIEnv(gym.Env):
     extra=0
     if(self.currentState.round_over == True):
         if(self.currentState.result == '1'):
-            extra = 100
+            extra = 500
         elif(self.currentState.result == '2'):
-            extra = -100
+            extra = -500
         else:
             raise ValueError('Should never get here')
 
     didMacHit=self.currentState.p1['score']-self.previousScore
     if (didMacHit > 0):
-        extra+=100
+        extra+=200
         didMacHit=0
     result = extra + ((self.currentState.p1['health']-self.currentState.p2['health'])*2)+(self.currentState.p1['hearts']*3)
 

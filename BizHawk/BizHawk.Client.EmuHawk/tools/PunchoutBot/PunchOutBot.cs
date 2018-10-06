@@ -218,12 +218,13 @@ namespace BizHawk.Client.EmuHawk
 
 		private int GetScore()
 		{
-			byte units = _currentDomain.PeekByte(0x03E5);
-			byte tens = _currentDomain.PeekByte(0x03E4);
-			byte hundreds = _currentDomain.PeekByte(0x03E3);
-			byte thousands = _currentDomain.PeekByte(0x03E2);
+			byte units = _currentDomain.PeekByte(0x03EC);
+			byte tens = _currentDomain.PeekByte(0x03EB);
+			byte hundreds = _currentDomain.PeekByte(0x03EA);
+			byte thousands = _currentDomain.PeekByte(0x03E9);
 			string formatedString=string.Format("{0}{1}{2}{3}",thousands,hundreds,tens,units);
-			return Convert.ToInt32(formatedString);
+			int testc = Convert.ToInt32(formatedString);
+			return testc;
 		}
 
 		private int GetHearts()

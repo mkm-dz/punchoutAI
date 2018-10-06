@@ -58,7 +58,7 @@ class Agent():
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         if os.path.isfile(self.weight_backup):
             model.load_weights(self.weight_backup)
-            self.exploration_rate = self.exploration_min
+            #self.exploration_rate = self.exploration_min
         return model
 
     def calculateActionIndex(self,action):
@@ -69,8 +69,8 @@ class Agent():
     def calculateActionFromIndex(self, index):
         result ={}
         semiAction=self.actionMap[index]
-        result[0]=semiAction[0]
-        result[1]=semiAction[1]
+        result[0]=int(semiAction[0])
+        result[1]=int(semiAction[1])
         return result
 
     def save_model(self):

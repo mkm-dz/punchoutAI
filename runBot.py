@@ -13,7 +13,7 @@ from classes.Agent import Agent
 class Program:
     def __init__(self):
         self.sample_batch_size = 32
-        self.episodes =300
+        self.episodes =90
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -86,9 +86,7 @@ class Program:
                     action = self.agent.act(state)
                     actionButtons = self.massageAction(action)
                     self.sendCommand('buttons', actionButtons)
-                    self.WaitForServer()
-                    self.sendCommand('get_state')
-                    currentState = self.WaitForServer()
+                    currentState=self.WaitForServer()
                     self.env.setState(currentState)
                     next_state, reward, done, _ = self.env.step(action)
                     next_state = np.reshape(next_state, [1, self.state_size])
@@ -99,7 +97,8 @@ class Program:
                 print("Episode {}# Score: {}".format(index_episode, totalReward))
                 self.agent.replay(self.sample_batch_size)
         finally:
-            self.agent.save_model()
+            #self.agent.save_model()
+            pass
 
 
 if __name__ == "__main__":
