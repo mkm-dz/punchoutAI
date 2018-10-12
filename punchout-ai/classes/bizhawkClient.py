@@ -33,11 +33,11 @@ class BizHawkClient():
 
     def Send(self, command: str):
         # Wait for a connection
-        print('sending command: %s' % command)
+        #print('sending command: %s' % command)
         self.sock.connect(self.server_address)
         if(command != None):
             msg = self._SendCommandToEmulator(command)
-            print('sending buttons: %s' % msg)
+            #print('sending buttons: %s' % msg)
             self.sock.sendall(msg.encode('utf-8'))
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()

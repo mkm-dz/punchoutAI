@@ -13,12 +13,12 @@ class punchoutAIEnv(gym.Env):
     self._observation = []
     self.observation_space = spaces.Dict({
         "opponent_id": spaces.Discrete(255),
-        #"self_health": spaces.Discrete(255),
         "opponent_action": spaces.Discrete(255),
         "opponentTimer": spaces.Discrete(255),
-        "round_over": spaces.Discrete(3),
+        "round_over": spaces.Discrete(2),
         "hearts": spaces.Discrete(255),
-        "result": spaces.Discrete(2),
+        "result": spaces.Discrete(3),
+        "canThrowPunches": spaces.Discrete(2)
     })
 
     self.action_space = spaces.Tuple([
@@ -56,30 +56,30 @@ class punchoutAIEnv(gym.Env):
   def computeState(self):
     castedSpaces = spaces.Dict({
         'opponent_id': self.currentState.p2['character'],
-        #'self_health': self.currentState.p1['health'],
         'opponent_action': self.currentState.p2['action'],
         'opponentTimer': self.currentState.p2['actionTimer'],
         'round_over': self.currentState.round_over,
         'hearts': self.currentState.p1['hearts'],
         'result': self.currentState.result,
+        'canThrowPunches': self.currentState.p1['canThrowPunches']
     })
     return np.fromiter(castedSpaces.spaces.values(), dtype=int)
 
   def computeReward(self):
     extra=0
-    if(self.currentState.round_over == True):
-        if(self.currentState.result == '1'):
-            extra = 500
-        elif(self.currentState.result == '2'):
-            extra = -500
-        else:
-            raise ValueError('Should never get here')
+    # if(self.currentState.round_over == True):
+    #     if(self.currentState.result == '1'):
+    #         extra = 500
+    #     elif(self.currentState.result == '2'):
+    #         extra = -500
+    #     else:
+    #         raise ValueError('Should never get here')
 
     didMacHit=self.currentState.p1['score']-self.previousScore
     if (didMacHit > 0):
         extra+=200
         didMacHit=0
-    result = extra + ((self.currentState.p1['health']-self.currentState.p2['health'])*2)+(self.currentState.p1['hearts']*3)
+    result = extra + ((self.currentState.p1['health']-self.currentState.p2['health'])*3)+(self.currentState.p1['hearts']*3) +(self.currentState.p1['score']*5)
 
     # This can be considered the last method so we 
     # set the previousScore in here

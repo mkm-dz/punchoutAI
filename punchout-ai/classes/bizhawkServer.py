@@ -22,7 +22,7 @@ class BizHawkServer(threading.Thread):
 
         # Bind the socket to the port
         server_address = ('localhost', 9999)
-        print('starting up on %s port %s' % server_address)
+        #print('starting up on %s port %s' % server_address)
         self.sock.bind(server_address)
 
         # Listen for incoming connections
@@ -35,16 +35,16 @@ class BizHawkServer(threading.Thread):
                 state=Payload(data.decode())
                 self.publicState = state
             else:
-                print('Client disconnected')
+                #print('Client disconnected')
                 break
 
     def run(self):
         # Wait for a connection
-        print('waiting for a connection')
+        #print('waiting for a connection')
         self.ready = True
         while True:
             client, address = self.sock.accept()
-            print('connection from %s' % address[0])
+            #print('connection from %s' % address[0])
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
 

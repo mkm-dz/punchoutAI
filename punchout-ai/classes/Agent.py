@@ -12,14 +12,15 @@ from keras import backend as K
 
 class Agent():
 
+    brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "cartpole_weight.h5"
+        self.weight_backup = "punchOutVonKaiser.h5"
         self.state_size = state_size
 
         self.output_dim = action_space.n
         self.action_space = action_space
         self.memory = deque(maxlen=2000)
-        self.learning_rate = 0.001
+        self.learning_rate = 0.005
         self.gamma = 0.95
         self.exploration_rate = 1.0
         self.exploration_min = 0.01
@@ -47,18 +48,21 @@ class Agent():
 
 
     def _build_model(self):
+        output_layers = self.action_space.spaces[0].n * self.action_space.spaces[1].n
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(24, activation='relu'))
-        #TODO this should be calculated based on the action permutations not hardcoded.
-        model.add(Dense(self.action_space.spaces[0].n * self.action_space.spaces[1].n))
+        model.add(Dense(self.state_size, input_dim=self.state_size, 
+        activation='relu'))
+        model.add(Dense(output_layers + 2, activation='relu'))
+        model.add(Dense(output_layers, activation='relu'))
+        model.add(Dense(output_layers))
         self.actionMap = self.createMapping()
 
-        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
+            pass
             model.load_weights(self.weight_backup)
-            #self.exploration_rate = self.exploration_min
+            self.exploration_rate = self.exploration_min
         return model
 
     def calculateActionIndex(self,action):
@@ -104,7 +108,6 @@ class Agent():
             else:
                 Q_future = max(self.brain.predict(final_state)[0])
                 target[0][action]=reward + Q_future * self.gamma
-            self.brain.fit(initial_state, target, epochs=1,verbose=0)
-
+            self.brain.fit(initial_state, target, epochs=1,verbose=1)
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay

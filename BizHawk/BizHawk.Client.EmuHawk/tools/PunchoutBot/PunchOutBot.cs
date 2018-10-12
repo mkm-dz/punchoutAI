@@ -31,7 +31,7 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
-		private const int framesPerCommand = 20;
+		private const int framesPerCommand = 10;
 		private int currentFrameCounter = 0;
 
 		private TextInfo capitalize  =  new CultureInfo("en-US", false).TextInfo;
@@ -138,6 +138,7 @@ namespace BizHawk.Client.EmuHawk
 			ControllerCommand cc = new ControllerCommand();
 			try
 			{
+				GlobalWin.MainForm.UnpauseEmulator();
 				cc = JsonConvert.DeserializeObject<ControllerCommand>(message.ToString().ToLower());
 				this.commandInQueue = cc;
 				this.commandInQueueAvailable = true;
@@ -209,6 +210,11 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			return false;
+		}
+
+		public int CanThrowPunches()
+		{
+			return _currentDomain.PeekByte(0x00BC);
 		}
 
 		private bool IsRoundOver()
@@ -363,6 +369,7 @@ namespace BizHawk.Client.EmuHawk
 
 			public int actionTimer { get; set; }
 
+			public int canThrowPunches { get; set; }
 
 		}
 		private class GameState
@@ -389,12 +396,14 @@ namespace BizHawk.Client.EmuHawk
 			p1.character = -1;
 			p1.hearts = this.GetHearts();
 			p1.score = this.GetScore();
+			p1.canThrowPunches = this.CanThrowPunches();
 
 			p2.health = GetHealthP2();
 			p2.action = GetOpponentAction();
 			p2.buttons = GetJoypadButtons(2);
 			p2.actionTimer = GetOpponentActionTimer();
 			p2.character = GetOpponentId();
+			p2.canThrowPunches = 0;
 
 
 			gs.p1 = p1;
@@ -715,6 +724,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state, int retry=0)
 		{
+			GlobalWin.MainForm.PauseEmulator();
 			ControllerCommand cc = new ControllerCommand();
 			TcpClient cl = null;
 			try

@@ -8,12 +8,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
 from classes.bizhawkClient import BizHawkClient
 from classes.Agent import Agent
-
-
 class Program:
     def __init__(self):
-        self.sample_batch_size = 32
-        self.episodes =90
+        self.sample_batch_size = 128
+        self.episodes =50
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -82,7 +80,6 @@ class Program:
                 done = False
                 totalReward = 0
                 while not done:
-                #while True:
                     action = self.agent.act(state)
                     actionButtons = self.massageAction(action)
                     self.sendCommand('buttons', actionButtons)
@@ -97,7 +94,8 @@ class Program:
                 print("Episode {}# Score: {}".format(index_episode, totalReward))
                 self.agent.replay(self.sample_batch_size)
         finally:
-            #self.agent.save_model()
+            self.agent.save_model()
+            print(self.agent.brain.summary())
             pass
 
 
