@@ -8,6 +8,8 @@ class punchoutAIEnv(gym.Env):
   metadata = {'render.modes': ['human']}
   currentState = None
   previousScore=0
+  previousHealth=0
+  previousHearths=-1000
 
   def __init__(self):
     self._observation = []
@@ -41,7 +43,8 @@ class punchoutAIEnv(gym.Env):
 
   def reset(self):
       self.previousScore=0
-      return self.computeState(self.currentState)
+      self.previousHealth=96
+      self.previousHearths=-1000
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
@@ -54,11 +57,15 @@ class punchoutAIEnv(gym.Env):
     self.currentState = object
 
   def computeState(self, state):
+    round_over = False
+    if(state.round_over):
+        round_over = True
+    
     castedSpaces = spaces.Dict({
         'opponent_id': state.p2['character'],
         'opponent_action': state.p2['action'],
         'opponentTimer': state.p2['actionTimer'],
-        'round_over': state.round_over,
+        'round_over': round_over,
         'hearts': state.p1['hearts'],
         'result': state.result,
         'canThrowPunches': state.p1['canThrowPunches']
@@ -66,24 +73,29 @@ class punchoutAIEnv(gym.Env):
     return np.fromiter(castedSpaces.spaces.values(), dtype=int)
 
   def computeReward(self):
-    extra=0
-    # if(self.currentState.round_over == True):
-    #     if(self.currentState.result == '1'):
-    #         extra = 500
-    #     elif(self.currentState.result == '2'):
-    #         extra = -500
-    #     else:
-    #         raise ValueError('Should never get here')
-
+    result = 0
+    if(self.previousHearths==-1000):
+        self.previousHearths=self.currentState.p1['hearts']
     didMacHit=self.currentState.p1['score']-self.previousScore
+    wasMacHit=self.currentState.p1['health']-self.previousHealth
+    hearthWasLost = self.currentState.p1['hearts']-self.previousHearths
     if (didMacHit > 0):
-        extra+=200
+        result+=50
         didMacHit=0
-    result = extra + ((self.currentState.p1['health']-self.currentState.p2['health'])*3)+(self.currentState.p1['hearts']*3) +(self.currentState.p1['score']*5)
+    if(wasMacHit < 0):
+        result= -50
+        wasMacHit=0
+    if(hearthWasLost<0):
+        result=-50
+        hearthWasLost=0
+    if(self.currentState.p1['canThrowPunches']==0):
+        result=-50
 
     # This can be considered the last method so we 
     # set the previousScore in here
     self.previousScore=self.currentState.p1['score']
+    self.previousHealth=self.currentState.p1['health']
+    self.previousHearths=self.currentState.p1['hearts']
     return result
 
   def computeDone(self):

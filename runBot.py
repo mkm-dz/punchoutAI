@@ -8,10 +8,11 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from classes.bizhawkServer import BizHawkServer
 from classes.bizhawkClient import BizHawkClient
 from classes.Agent import Agent
+
 class Program:
     def __init__(self):
-        self.sample_batch_size = 128
-        self.episodes =100
+        self.sample_batch_size = 64
+        self.episodes =250
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -74,7 +75,7 @@ class Program:
                 # self.sendCommand('get_state')
                 # currentState = self.WaitForServer()
                 # self.env.setState(currentState)
-                # state=self.env.reset()
+                self.env.reset()
                 done = False
                 totalReward = 0
                 while not done:

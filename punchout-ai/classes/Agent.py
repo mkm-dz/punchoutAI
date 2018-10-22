@@ -6,6 +6,7 @@ import numpy as np
 
 from collections import deque
 from keras.models import Sequential
+from keras.models import load_model
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras import backend as K
@@ -14,7 +15,7 @@ class Agent():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "punchOutVonKaiser.h5"
+        self.weight_backup = "VonKayser.h5py"
         self.state_size = state_size
 
         self.output_dim = action_space.n
@@ -60,8 +61,7 @@ class Agent():
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
-            pass
-            model.load_weights(self.weight_backup)
+            model = load_model(self.weight_backup)
             self.exploration_rate = self.exploration_min
         return model
 
@@ -78,7 +78,7 @@ class Agent():
         return result
 
     def save_model(self):
-            self.brain.save(self.weight_backup)
+        self.brain.save(self.weight_backup)
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:
