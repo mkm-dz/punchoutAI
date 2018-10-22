@@ -108,6 +108,6 @@ class Agent():
             else:
                 Q_future = max(self.brain.predict(final_state)[0])
                 target[0][action]=reward + Q_future * self.gamma
-            self.brain.fit(initial_state, target, epochs=1,verbose=1)
+            self.brain.fit(initial_state, target, epochs=1,verbose=0)
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay

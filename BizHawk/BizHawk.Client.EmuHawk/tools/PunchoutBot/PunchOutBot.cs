@@ -31,10 +31,13 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
-		private const int framesPerCommand = 10;
+		private const int framesPerCommand = 11;
 		private int currentFrameCounter = 0;
+		private bool waitingForOpponentActionToEnd = false;
+		private bool waitingForMacActionToEnd = false;
+		private bool onReset = false;
 
-		private TextInfo capitalize  =  new CultureInfo("en-US", false).TextInfo;
+		private TextInfo capitalize = new CultureInfo("en-US", false).TextInfo;
 
 
 		private string CurrentFileName
@@ -138,10 +141,10 @@ namespace BizHawk.Client.EmuHawk
 			ControllerCommand cc = new ControllerCommand();
 			try
 			{
-				GlobalWin.MainForm.UnpauseEmulator();
 				cc = JsonConvert.DeserializeObject<ControllerCommand>(message.ToString().ToLower());
 				this.commandInQueue = cc;
 				this.commandInQueueAvailable = true;
+				GlobalWin.MainForm.UnpauseEmulator();
 			}
 			catch (ArgumentNullException ane)
 			{
@@ -217,9 +220,47 @@ namespace BizHawk.Client.EmuHawk
 			return _currentDomain.PeekByte(0x00BC);
 		}
 
+		public bool IsOpponentMoving()
+		{
+			if (_currentDomain.PeekByte(0x0097) != 0)
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		public bool IsOpponentStartingAnAction()
+		{
+			if (!this.waitingForOpponentActionToEnd && this.IsOpponentMoving())
+			{
+				this.waitingForOpponentActionToEnd = true;
+				return true;
+			}
+
+			return false;
+		}
+
+		public bool IsMacMoving()
+		{
+			if ((_currentDomain.PeekByte(0x0051) != 0))
+			{
+				return true;
+			}
+
+			return false;
+		}
+
 		private bool IsRoundOver()
 		{
-			return GetHealthP1() <= 0 || GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
+			if (!this.onReset)
+			{
+				return GetHealthP1() <= 0 || GetHealthP2() <= 0 || _currentDomain.PeekByte(0x0004) != 255;
+			}
+			else
+			{
+				return false;
+			}
 		}
 
 		private int GetScore()
@@ -228,7 +269,7 @@ namespace BizHawk.Client.EmuHawk
 			byte tens = _currentDomain.PeekByte(0x03EB);
 			byte hundreds = _currentDomain.PeekByte(0x03EA);
 			byte thousands = _currentDomain.PeekByte(0x03E9);
-			string formatedString=string.Format("{0}{1}{2}{3}",thousands,hundreds,tens,units);
+			string formatedString = string.Format("{0}{1}{2}{3}", thousands, hundreds, tens, units);
 			int testc = Convert.ToInt32(formatedString);
 			return testc;
 		}
@@ -282,7 +323,7 @@ namespace BizHawk.Client.EmuHawk
 			return buttons;
 		}
 
-		public string SetJoypadButtons(Dictionary<string, bool> buttons, int? controller = null, bool clearAll=false)
+		public string SetJoypadButtons(Dictionary<string, bool> buttons, int? controller = null, bool clearAll = false)
 		{
 			StringBuilder pressed = new StringBuilder();
 			try
@@ -344,7 +385,7 @@ namespace BizHawk.Client.EmuHawk
 					}
 				}
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				throw;
 				/*Eat it*/
@@ -625,35 +666,52 @@ namespace BizHawk.Client.EmuHawk
 
 		private void Update(bool fast)
 		{
-			if(this.currentFrameCounter > 0 && this.currentFrameCounter <= PunchOutBot.framesPerCommand)
+			// Reset has priority on everyframe
+			this.ExecuteResetIfNeeded();
+
+			// Resume a paused game has priority
+			this.ResumeGameIfNeeded();
+
+			// If Mac is executing a move we want to make sure it gets executed so we execute it over x 
+			// amount of frames
+			this.ExecuteMacMoveForSeveralFrames();
+
+			if (this.IsOpponentStartingAnAction())
 			{
-				if (this.currentFrameCounter == 1)
-				{
-					string buttonsPressed = SetJoypadButtons(this.commandInQueue.p1, 1);
-					GlobalWin.OSD.ClearGUIText();
-					GlobalWin.OSD.AddMessageForTime(buttonsPressed, _OSDMessageTimeInSeconds);
-				}
+				// send status to server.
+				GameState gs = GetCurrentState();
+				this.SendEmulatorGameStateToController(gs);
+			}
+			else if (this.waitingForOpponentActionToEnd && !this.IsOpponentMoving() && !this.waitingForMacActionToEnd)
+			{
+				this.waitingForOpponentActionToEnd = false;
 
-				this.currentFrameCounter++;
-				if (this.currentFrameCounter == PunchOutBot.framesPerCommand)
-				{
-					SetJoypadButtons(this.commandInQueue.p1, 1, true);
-					GameState gs = GetCurrentState();
-					this.currentFrameCounter = 0;
-					this.commandInQueueAvailable = false;
-					this.SendEmulatorGameStateToController(gs);
-				}
+				// action finished send status to server and let the game continue (if needed)
+				GameState gs = GetCurrentState();
+				this.SendEmulatorGameStateToController(gs);
+			}
+			else
+			{
+				this.ExecuteMacActionIfNeeded();
+			}
+		}
 
-				return;
+		private void ExecuteResetIfNeeded()
+		{
+			if (this.IsRoundOver())
+			{
+				// if the round is over we clear any message waiting on the agent.
+				GameState gs = GetCurrentState();
+				this.SendEmulatorGameStateToController(gs);
 			}
 
-			if (!commandInQueueAvailable)
+			if (this.commandInQueueAvailable && this.commandInQueue.type == "reset")
 			{
-				return;
-			}
+				this.commandInQueueAvailable = false;
 
-			lock (this.commandSync)
-			{
+				// This is only for letting the server know we executed the command.
+				GameState gs = GetCurrentState();
+				this.SendEmulatorGameStateToController(gs);
 				if (_isBotting)
 				{
 					try
@@ -682,49 +740,70 @@ namespace BizHawk.Client.EmuHawk
 							GlobalWin.OSD.ClearGUIText();
 							GlobalWin.OSD.AddMessageForTime("Game #: " + _totalGames + " | Last Result: " + _lastResult + " | P1 Wins-Losses: " + _wins + "-" + _losses + " (" + _winsToLosses + ") | P2 Wins-Losses: " + _p2_wins + "-" + _p2_losses + " (" + _p2_winsToLosses + ")", _OSDMessageTimeInSeconds);
 						}
-						//if (_post_round_wait_time < Global.Config.round_over_delay)
-						//{
-						//	if (_post_round_wait_time < 1)
-						//	{
-						//		_post_round_wait_time = Global.Config.round_over_delay;
-						//		if (Global.Config.pause_after_round)
-						//		{
-						//			GlobalWin.MainForm.PauseEmulator();
-						//			return;
-						//		}
-						//	}
-						//	else
-						//	{
-						//		_post_round_wait_time--;
-						//		return;
-						//	}
-						//}
-
-						string command_type = this.commandInQueue.type;
-						if (command_type == "reset")
-						{
-							this.commandInQueueAvailable = false;
-							GameState gs = GetCurrentState();
-							this.SendEmulatorGameStateToController(gs);
-							GlobalWin.MainForm.LoadState(this.commandInQueue.savegamepath, Path.GetFileName(this.commandInQueue.savegamepath));
-							game_in_progress = true;
-						}
-						else
-						{
-							this.currentFrameCounter = 1;
-						}
 					}
 					catch (Exception e)
 					{
 						throw e;
 					}
 				}
+				game_in_progress = true;
+				this.onReset = true;
+				GlobalWin.MainForm.LoadState(this.commandInQueue.savegamepath, Path.GetFileName(this.commandInQueue.savegamepath));
 			}
 		}
 
-		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state, int retry=0)
+		private void ResumeGameIfNeeded()
 		{
-			GlobalWin.MainForm.PauseEmulator();
+			if (this.commandInQueueAvailable && this.commandInQueue.type == "resume")
+			{
+				GlobalWin.MainForm.UnpauseEmulator();
+			}
+		}
+
+		private void ExecuteMacActionIfNeeded()
+		{
+			// After one action we do not need the reset flag
+			this.onReset = false;
+
+			if (this.commandInQueueAvailable && this.commandInQueue.type == "buttons" && !this.waitingForMacActionToEnd)
+			{
+				this.currentFrameCounter = 1;
+			}
+		}
+
+		private void ExecuteMacMoveForSeveralFrames()
+		{
+			if (this.currentFrameCounter > 0 && this.currentFrameCounter <= PunchOutBot.framesPerCommand)
+			{
+				if (this.currentFrameCounter == 1)
+				{
+					string buttonsPressed = SetJoypadButtons(this.commandInQueue.p1, 1);
+					GlobalWin.OSD.ClearGUIText();
+					GlobalWin.OSD.AddMessageForTime(buttonsPressed, _OSDMessageTimeInSeconds);
+					this.waitingForMacActionToEnd = true;
+				}
+
+				this.currentFrameCounter++;
+				if (this.currentFrameCounter == PunchOutBot.framesPerCommand)
+				{
+					SetJoypadButtons(this.commandInQueue.p1, 1, true);
+					this.currentFrameCounter = 0;
+					this.commandInQueueAvailable = false;
+				}
+			}
+			else
+			{
+				if (this.waitingForMacActionToEnd && !this.IsMacMoving())
+				{
+					this.waitingForMacActionToEnd = false;
+					//GameState gs = GetCurrentState();
+					//this.SendEmulatorGameStateToController(gs);
+				}
+			}
+		}
+
+		private async Task<ControllerCommand> SendEmulatorGameStateToController(GameState state, int retry = 0, bool forceResume = false)
+		{
 			ControllerCommand cc = new ControllerCommand();
 			TcpClient cl = null;
 			try
@@ -738,7 +817,10 @@ namespace BizHawk.Client.EmuHawk
 				byte[] msg = Encoding.UTF8.GetBytes(data);
 				await stream.WriteAsync(msg, 0, msg.Length);
 
-
+				if (!forceResume)
+				{
+					GlobalWin.MainForm.PauseEmulator();
+				}
 			}
 			catch (ArgumentNullException ane)
 			{
@@ -746,12 +828,12 @@ namespace BizHawk.Client.EmuHawk
 			}
 			catch (SocketException se)
 			{
-				if(retry > 3)
+				if (retry > 3)
 				{
 					throw se;
 				}
 
-				if(se.ErrorCode == 10061)
+				if (se.ErrorCode == 10061)
 				{
 					Thread.Sleep(300);
 					//Console.WriteLine("*****Retrying send command");
@@ -781,7 +863,7 @@ namespace BizHawk.Client.EmuHawk
 			_isBotting = true;
 			RunBtn.Visible = false;
 			StopBtn.Visible = true;
-			CreateTcpServer(PunchOutBot.serverAddress,PunchOutBot.serverPort);
+			CreateTcpServer(PunchOutBot.serverAddress, PunchOutBot.serverPort);
 
 			Global.Config.SoundEnabled = false;
 			GlobalWin.MainForm.UnpauseEmulator();
@@ -889,7 +971,7 @@ namespace BizHawk.Client.EmuHawk
 					// create a thread to handle communication
 					HandleClient(newClient);
 				}
-				catch(Exception e)
+				catch (Exception e)
 				{
 					throw e;
 				}

@@ -34,14 +34,14 @@ class punchoutAIEnv(gym.Env):
     self.action_space.n = len(self.action_space.spaces)
 
   def step(self, action):
-    self._observation = self.computeState()
+    self._observation = self.computeState(self.currentState)
     reward = self.computeReward()
     done = self.computeDone()
     return self._observation, reward, done, {}
 
   def reset(self):
       self.previousScore=0
-      return self.computeState()
+      return self.computeState(self.currentState)
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
@@ -53,15 +53,15 @@ class punchoutAIEnv(gym.Env):
   def setState(self, object):
     self.currentState = object
 
-  def computeState(self):
+  def computeState(self, state):
     castedSpaces = spaces.Dict({
-        'opponent_id': self.currentState.p2['character'],
-        'opponent_action': self.currentState.p2['action'],
-        'opponentTimer': self.currentState.p2['actionTimer'],
-        'round_over': self.currentState.round_over,
-        'hearts': self.currentState.p1['hearts'],
-        'result': self.currentState.result,
-        'canThrowPunches': self.currentState.p1['canThrowPunches']
+        'opponent_id': state.p2['character'],
+        'opponent_action': state.p2['action'],
+        'opponentTimer': state.p2['actionTimer'],
+        'round_over': state.round_over,
+        'hearts': state.p1['hearts'],
+        'result': state.result,
+        'canThrowPunches': state.p1['canThrowPunches']
     })
     return np.fromiter(castedSpaces.spaces.values(), dtype=int)
 

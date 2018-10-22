@@ -11,7 +11,7 @@ from classes.Agent import Agent
 class Program:
     def __init__(self):
         self.sample_batch_size = 128
-        self.episodes =50
+        self.episodes =100
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -71,25 +71,28 @@ class Program:
             for index_episode in range(self.episodes):
                 self.sendCommand('reset')
                 self.WaitForServer()
-                self.sendCommand('get_state')
-                currentState = self.WaitForServer()
-                self.env.setState(currentState)
-                state=self.env.reset()
-                state = np.reshape(state, [1, self.state_size])
-
+                # self.sendCommand('get_state')
+                # currentState = self.WaitForServer()
+                # self.env.setState(currentState)
+                # state=self.env.reset()
                 done = False
                 totalReward = 0
                 while not done:
+                    self.sendCommand('resume', None)
+                    # Wait for opponent to initiate action
+                    state = self.WaitForServer()
+                    state = self.env.computeState(state)
+                    state = np.reshape(state, [1, self.state_size])
                     action = self.agent.act(state)
                     actionButtons = self.massageAction(action)
                     self.sendCommand('buttons', actionButtons)
                     currentState=self.WaitForServer()
                     self.env.setState(currentState)
                     next_state, reward, done, _ = self.env.step(action)
+                    # At this point next_state has the value at the action, meaning, if I connected a hit it has that value, be careful not to confuse this state with the "next available state" which is when the character is free to do it's next action.
                     next_state = np.reshape(next_state, [1, self.state_size])
                     self.agent.remember(
                         state, action, reward, next_state, done)
-                    state = next_state
                     totalReward += reward
                 print("Episode {}# Score: {}".format(index_episode, totalReward))
                 self.agent.replay(self.sample_batch_size)
