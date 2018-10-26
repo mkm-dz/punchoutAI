@@ -82,12 +82,19 @@ class punchoutAIEnv(gym.Env):
     if (didMacHit > 0):
         result+=50
         didMacHit=0
+
     if(wasMacHit < 0):
-        result= -50
-        wasMacHit=0
+        result+= -50
+    elif(wasMacHit >0):
+        result+=50
+    wasMacHit=0
+
     if(hearthWasLost<0):
-        result=-50
-        hearthWasLost=0
+        result+=-50
+    elif(hearthWasLost>0):
+        result+=50
+    hearthWasLost=0
+
     if(self.currentState.p1['canThrowPunches']==0):
         result=-50
 

@@ -11,8 +11,8 @@ from classes.Agent import Agent
 
 class Program:
     def __init__(self):
-        self.sample_batch_size = 64
-        self.episodes =250
+        self.sample_batch_size = 28
+        self.episodes =550
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -98,7 +98,7 @@ class Program:
                 print("Episode {}# Score: {}".format(index_episode, totalReward))
                 self.agent.replay(self.sample_batch_size)
         finally:
-            self.agent.save_model()
+            #self.agent.save_model()
             print(self.agent.brain.summary())
             pass
 

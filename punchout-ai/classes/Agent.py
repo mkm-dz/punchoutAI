@@ -15,7 +15,7 @@ class Agent():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "VonKayser.h5py"
+        self.weight_backup = "PistonHonda.h5py"
         self.state_size = state_size
 
         self.output_dim = action_space.n
@@ -106,8 +106,8 @@ class Agent():
             if done:
                 target[0][action]=reward
             else:
-                Q_future = max(self.brain.predict(final_state)[0])
-                target[0][action]=reward + Q_future * self.gamma
+                target = self.brain.predict(final_state)
+                target[0][action]=reward
             self.brain.fit(initial_state, target, epochs=1,verbose=0)
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay

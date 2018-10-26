@@ -243,7 +243,9 @@ namespace BizHawk.Client.EmuHawk
 
 		public bool IsMacMoving()
 		{
-			if ((_currentDomain.PeekByte(0x0051) != 0))
+
+			if ((_currentDomain.PeekByte(0x0051) != 0)
+				|| (_currentDomain.PeekByte(0x06A0) == 8))
 			{
 				return true;
 			}
@@ -769,6 +771,12 @@ namespace BizHawk.Client.EmuHawk
 			{
 				this.currentFrameCounter = 1;
 			}
+			else if(!this.IsMacMoving() && !this.waitingForMacActionToEnd)
+			{
+				// Tell the frontend retrieve my state and execute action (Cause at this point nobody is)
+				GameState gs = GetCurrentState();
+				this.SendEmulatorGameStateToController(gs);
+			}
 		}
 
 		private void ExecuteMacMoveForSeveralFrames()
@@ -796,8 +804,6 @@ namespace BizHawk.Client.EmuHawk
 				if (this.waitingForMacActionToEnd && !this.IsMacMoving())
 				{
 					this.waitingForMacActionToEnd = false;
-					//GameState gs = GetCurrentState();
-					//this.SendEmulatorGameStateToController(gs);
 				}
 			}
 		}
