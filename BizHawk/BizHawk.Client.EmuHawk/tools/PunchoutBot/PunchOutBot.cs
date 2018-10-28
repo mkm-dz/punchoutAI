@@ -31,7 +31,7 @@ namespace BizHawk.Client.EmuHawk
 		private const int clientPort = 9999;
 		private const int serverPort = 9998;
 
-		private const int framesPerCommand = 11;
+		private const int framesPerCommand = 21;
 		private int currentFrameCounter = 0;
 		private bool waitingForOpponentActionToEnd = false;
 		private bool waitingForMacActionToEnd = false;
@@ -245,7 +245,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 
 			if ((_currentDomain.PeekByte(0x0051) != 0)
-				|| (_currentDomain.PeekByte(0x06A0) == 8))
+				|| this.waitingForMacActionToEnd)
 			{
 				return true;
 			}
@@ -678,7 +678,7 @@ namespace BizHawk.Client.EmuHawk
 			// amount of frames
 			this.ExecuteMacMoveForSeveralFrames();
 
-			if (this.IsOpponentStartingAnAction())
+			if (this.IsOpponentStartingAnAction() && !this.IsMacMoving() && this.GetOpponentActionTimer()==0)
 			{
 				// send status to server.
 				GameState gs = GetCurrentState();
@@ -771,7 +771,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				this.currentFrameCounter = 1;
 			}
-			else if(!this.IsMacMoving() && !this.waitingForMacActionToEnd)
+			else if(!this.IsMacMoving())
 			{
 				// Tell the frontend retrieve my state and execute action (Cause at this point nobody is)
 				GameState gs = GetCurrentState();
@@ -797,12 +797,6 @@ namespace BizHawk.Client.EmuHawk
 					SetJoypadButtons(this.commandInQueue.p1, 1, true);
 					this.currentFrameCounter = 0;
 					this.commandInQueueAvailable = false;
-				}
-			}
-			else
-			{
-				if (this.waitingForMacActionToEnd && !this.IsMacMoving())
-				{
 					this.waitingForMacActionToEnd = false;
 				}
 			}

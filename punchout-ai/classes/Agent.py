@@ -15,7 +15,7 @@ class Agent():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "PistonHonda.h5py"
+        self.weight_backup = "DonFlamenco.h5py"
         self.state_size = state_size
 
         self.output_dim = action_space.n
@@ -24,7 +24,7 @@ class Agent():
         self.learning_rate = 0.005
         self.gamma = 0.95
         self.exploration_rate = 1.0
-        self.exploration_min = 0.01
+        self.exploration_min = 0.30
         self.exploration_decay = 0.995
         self.brain = self._build_model()
 
