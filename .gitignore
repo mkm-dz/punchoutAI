@@ -1,2 +1,5 @@
-punchout-ai/punchOutAI.egg-info/**/*
+punchout-ai/punchout_ai.egg-info/**/*
 .vscode/**/*
+BizHawk/**/*
+!BizHawk/BizHawk.Client.EmuHawk/tools/PunchoutBot/**/*
+/**/__pycache__/**/*
