@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-# punchoutAI
-=======
-# punchoutAI
-A keras bot that plays Nintendo's(tm) Punchout 
->>>>>>> bc11e1b56d9a2fac88fbbdadba2c64adf62779ad
+Punchout AI
+
+Nintendo's (TM) Mike Tyson Punchout played by an AI bot using Bizhawk emulator. 
+
+Inspired and based on GyroscopeHQ's Street fighter bot.
