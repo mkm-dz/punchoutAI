@@ -10,7 +10,7 @@ How to run
 - Go to the BizHawkPunchOutAI folder and build the solution
 - Open the Emuhawk.exe executable and load the game.
 - Start a fight against a character and save the state at the beggining of the fight.
-- Go to the punchout-ai *folder/classes* and modify the *savegamepath* variable to point to the saved state create in the previous step.
+- Go to the punchout-ai *folder/classes* and modify the *savegamepath* variable (bizhawkClient.py and bizhawkServer.py) to point to the saved state create in the previous step.
 - Go to the punchout-ai *folder/classes* and modify the *self.wight_backup* variable to match your character.
 - Run the runBot.py script.
 
