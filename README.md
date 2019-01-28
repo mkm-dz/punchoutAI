@@ -4,6 +4,8 @@ Nintendo's (TM) Mike Tyson Punchout played by an AI bot using Bizhawk emulator.
 
 Inspired and based on GyroscopeHQ's Street fighter bot.
 
+**I'll not accept any Pull Request(s) that contain references to ROM's or ROM save state's.**
+
 Setup
 ---------
 - Get python 3.6 (newer version may work as well)
@@ -22,3 +24,5 @@ Run
 - An interface should pop, at this point everything seems frozen, this is ok as the port is waiting for instructions
 - Run *runBot.py*
 - You should see Bizhawk and the *runBot.py* script interacting.
+
+**Questions? Read the Wiki.**
