@@ -50,6 +50,7 @@ class punchoutAIEnv(gym.Env):
             # Send the buttons, and wait to see what happened (observation)
             _next_state = self.sendActionToEmulator(action.agentAction)
             observation = self.punchUtils.castEmuStateToObservation(_next_state)
+            observation = np.reshape(observation, [1, self.observation_space.n])
             reward = self.computeReward(_next_state)
             done = self.computeDone(_next_state)
             return observation, reward, done, {}

@@ -17,10 +17,10 @@ class Agent():
     def __init__(self, state_size, action_space):
         self.weight_backup = "DonFlamenco.h5py"
         self.state_size = state_size
-
-        self.output_dim = action_space.n
-        self.action_space = action_space
-        self.memory = deque(maxlen=2000)
+        self.action_space =  action_space
+        self.action_space_size = 1
+        for index in range(0, action_space.n):
+            self.action_space_size *= action_space.spaces[index].n
         self.learning_rate = 0.005
         self.gamma = 0.95
         self.exploration_rate = 1.0
@@ -29,6 +29,8 @@ class Agent():
         self.brain = self._build_model()
 
     def createMapping(self):
+        # We have an output space of 15 possible actions (moves)
+        # we map each one to a controller action
         result={}
         result[0] = '00'
         result[1] = '01'
@@ -49,14 +51,13 @@ class Agent():
 
 
     def _build_model(self):
-        output_layers = self.action_space.spaces[0].n * self.action_space.spaces[1].n
         # Neural Net for Deep-Q learning Model
         model = Sequential()
         model.add(Dense(self.state_size, input_dim=self.state_size, 
         activation='relu'))
-        model.add(Dense(output_layers + 2, activation='relu'))
-        model.add(Dense(output_layers, activation='relu'))
-        model.add(Dense(output_layers))
+        model.add(Dense(self.action_space_size + 2, activation='relu'))
+        model.add(Dense(self.action_space_size, activation='relu'))
+        model.add(Dense(self.action_space_size))
         self.actionMap = self.createMapping()
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
@@ -78,7 +79,8 @@ class Agent():
         return result
 
     def save_model(self):
-        self.brain.save(self.weight_backup)
+        pass
+        #self.brain.save(self.weight_backup)
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:
@@ -87,27 +89,16 @@ class Agent():
             for index in range(0, spacesLength):
                 result[index]=random.randint(0, self.action_space.spaces[index].n-1)
             return result
-        act_values = self.brain.predict(state)[0]
+        act_values = self.brain.predict(state)
         maxValueIndex = np.argmax(act_values)
-
         return self.calculateActionFromIndex(maxValueIndex)
 
-    def remember(self, state, action, reward, next_state, done):
-        castedAction=self.calculateActionIndex(action)
-        self.memory.append((state, castedAction, reward, next_state, done))
-
-    def replay(self, sample_batch_size):
-        if len(self.memory) < sample_batch_size:
-            return
-        sample_batch = random.sample(self.memory, sample_batch_size)
-
-        for initial_state, action, reward, final_state, done in sample_batch:
-            target = self.brain.predict(initial_state)
-            if done:
-                target[0][action]=reward
-            else:
-                target = self.brain.predict(final_state)
-                target[0][action]=reward
-            self.brain.fit(initial_state, target, epochs=1,verbose=0)
+    # Updates the Q Table
+    def remember(self, state, new_state, reward):
+        highest_action_value = np.argmax(self.brain.predict(state))
+        target = reward + ((self.gamma) * np.max(self.brain.predict(new_state)))
+        target_vec = self.brain.predict(state)[0]
+        target_vec[highest_action_value] = target
+        self.brain.fit(state, target_vec.reshape(-1, self.action_space_size), epochs=1, verbose=0)
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay
