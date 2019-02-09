@@ -96,6 +96,9 @@ class punchoutAIEnv(gym.Env):
             result += -50
         elif(wasMacHit > 0):
             result += 50
+        elif(wasMacHit == 0):
+            # Mac avoided being hit
+            result += 10
         wasMacHit = 0
 
         if(hearthWasLost < 0):
