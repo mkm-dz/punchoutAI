@@ -83,32 +83,33 @@ class punchoutAIEnv(gym.Env):
 
     def computeReward(self, observation):
         result = 0
+        canThrowPunches = observation.p1['canThrowPunches']
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
         didMacHit = observation.p1['score']-self.previousScore
         wasMacHit = observation.p1['health']-self.previousHealth
         hearthWasLost = observation.p1['hearts']-self.previousHearths
         if (didMacHit > 0):
-            result += 50
+            result += 5
             didMacHit = 0
 
         if(wasMacHit < 0):
-            result += -50
+            result += -5
         elif(wasMacHit > 0):
-            result += 50
-        elif(wasMacHit == 0):
+            result += 5
+        elif(wasMacHit == 0 and canThrowPunches != 0):
             # Mac avoided being hit
-            result += 10
+            result += 1
         wasMacHit = 0
 
         if(hearthWasLost < 0):
-            result += -50
+            result += -5
         elif(hearthWasLost > 0):
-            result += 50
+            result += 5
         hearthWasLost = 0
 
-        if(observation.p1['canThrowPunches'] == 0):
-            result = -50
+        if(canThrowPunches == 0):
+            result += -5
 
         # This can be considered the last method so we
         # set the previousScore in here

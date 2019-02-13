@@ -15,7 +15,7 @@ class Agent():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "DonFlamenco.h5py"
+        self.weight_backup = "VonKaiser.h5py"
         self.state_size = state_size
         self.action_space =  action_space
         self.action_space_size = 1
@@ -25,7 +25,7 @@ class Agent():
         self.gamma = 0.95
         self.exploration_rate = 1.0
         self.exploration_min = 0.30
-        self.exploration_decay = 0.995
+        self.exploration_decay = 0.999
         self.brain = self._build_model()
 
     def createMapping(self):
@@ -63,7 +63,7 @@ class Agent():
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
             model = load_model(self.weight_backup)
-            self.exploration_rate = self.exploration_min
+            self.exploration_rate = self.exploration_min * 2
         return model
 
     def calculateActionIndex(self,action):
@@ -79,8 +79,7 @@ class Agent():
         return result
 
     def save_model(self):
-        pass
-        #self.brain.save(self.weight_backup)
+        self.brain.save(self.weight_backup)
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:

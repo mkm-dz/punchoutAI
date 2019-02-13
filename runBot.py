@@ -11,7 +11,7 @@ from classes.AgentActionWrapper import AgentActionWrapper
 class Program:
     def __init__(self):
         self.sample_batch_size = 128
-        self.episodes =160
+        self.episodes =400
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -23,6 +23,7 @@ class Program:
                 self.env.reset()
                 done = False
                 totalReward = 0
+                counter = 0
                 command = {}
                 command = AgentActionWrapper()
                 while not done:
@@ -39,13 +40,11 @@ class Program:
                     command.envCommand = 'sendButtons'
                     next_state, reward, done, _ = self.env.step(command)
 
-                    # At this point next_state has the value at the action, meaning, if I connected a hit it has that value, be careful not to confuse this state with the "next available state" which is when the character is free to do it's next action.
-                    #next_state = np.reshape(next_state, [1, self.state_size])
                     self.agent.remember(
                         state, next_state, reward)
                     totalReward += reward
-                print("Episode {}# Score: {}".format(index_episode, totalReward))
-                #self.agent.replay(self.sample_batch_size)
+                    counter+=1
+                print("Episode:|{}|Total Reward:|{}".format(index_episode, (totalReward/counter)))
         finally:
             self.agent.save_model()
             print(self.agent.brain.summary())
