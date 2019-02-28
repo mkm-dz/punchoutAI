@@ -42,15 +42,11 @@ class punchUtils():
         return tempCommands
 
     def castEmuStateToObservation(self, state):
-        round_over = False
-        if(state.round_over):
-            round_over = True
-
         castedSpaces = spaces.Dict({
             'opponent_id': state.p2['character'],
             'opponent_action': state.p2['action'],
             'opponentTimer': state.p2['actionTimer'],
-            'round_over': round_over,
+            'secondary_opponent_action': state.p2['secondaryAction'],
             'hearts': state.p1['hearts'],
             'result': state.result,
             'canThrowPunches': state.p1['canThrowPunches']

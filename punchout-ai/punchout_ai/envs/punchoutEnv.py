@@ -20,7 +20,7 @@ class punchoutAIEnv(gym.Env):
             "opponent_id": spaces.Discrete(255),
             "opponent_action": spaces.Discrete(255),
             "opponentTimer": spaces.Discrete(255),
-            "round_over": spaces.Discrete(2),
+            "secondary_opponent_action": spaces.Discrete(255),
             "hearts": spaces.Discrete(255),
             "result": spaces.Discrete(3),
             "canThrowPunches": spaces.Discrete(2)
@@ -107,9 +107,6 @@ class punchoutAIEnv(gym.Env):
         elif(hearthWasLost > 0):
             result += 5
         hearthWasLost = 0
-
-        if(canThrowPunches == 0):
-            result += -5
 
         # This can be considered the last method so we
         # set the previousScore in here

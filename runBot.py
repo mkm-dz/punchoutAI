@@ -10,8 +10,7 @@ from classes.AgentActionWrapper import AgentActionWrapper
 
 class Program:
     def __init__(self):
-        self.sample_batch_size = 128
-        self.episodes =400
+        self.episodes =100
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
