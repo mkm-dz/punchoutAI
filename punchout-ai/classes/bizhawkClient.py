@@ -10,7 +10,7 @@ class Payload(object):
 
 
 class BizHawkClient():
-    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":false,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","savegamepath":"c:\\\\users\\\\user\\\\Desktop\\\\punchOut\\\\punchOut4.state"}'
+    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"c:\\\\users\\\\user\\\\Desktop\\\\punchOut\\\\punchOut2.state"}'
 
     server_address = None
     hit = False
@@ -28,7 +28,8 @@ class BizHawkClient():
 
     def _SendCommandToEmulator(self, command: str)->str:
         formattedTemplate = self.template % (
-            self.buttons['Up'], self.buttons['Down'], self.buttons['Left'], self.buttons['Right'], self.buttons['A'], self.buttons['B'], command)
+            self.buttons['Up'], self.buttons['Down'], self.buttons['Left'], self.buttons['Right'],
+            self.buttons['Start'], self.buttons['A'], self.buttons['B'], command, self.buttons['Timing'])
         return formattedTemplate
 
     def Send(self, command: str):

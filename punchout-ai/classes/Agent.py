@@ -29,26 +29,75 @@ class Agent():
         self.brain = self._build_model()
 
     def createMapping(self):
-        # We have an output space of 15 possible actions (moves)
-        # we map each one to a controller action
-        result={}
-        result[0] = '00'
-        result[1] = '01'
-        result[2] = '02'
-        result[3] = '03'
-        result[4] = '04'
-        result[5] = '10'
-        result[6] = '11'
-        result[7] = '12'
-        result[8] = '13'
-        result[9] = '14'
-        result[10] = '20'
-        result[11] = '21'
-        result[12] = '22'
-        result[13] = '23'
-        result[14] = '24'
-        return result
+        # We have an output space of 60 possible actions (moves)
 
+        # we map each one to a controller action
+        # First digit = timin 0-Low 1-Medium 2-High
+        # second digit = buttons 0-None 1-A 2-B 3-Start
+        # third digit = direction 0-None 1-Up 2-Right 3-Down 4-Left
+        result={}
+        result[0] =  '000'
+        result[1] =  '001'
+        result[2] =  '002'
+        result[3] =  '003'
+        result[4] =  '004'
+        result[5] =  '010'
+        result[6] =  '011'
+        result[7] =  '012'
+        result[8] =  '013'
+        result[9] =  '014'
+        result[10] = '020'
+        result[11] = '021'
+        result[12] = '022'
+        result[13] = '023'
+        result[14] = '024'
+        result[15] = '030'
+        result[16] = '031'
+        result[17] = '032'
+        result[18] = '033'
+        result[19] = '034'
+        result[20] = '100'
+        result[21] = '101'
+        result[22] = '102'
+        result[23] = '103'
+        result[24] = '104'
+        result[25] = '110'
+        result[26] = '111'
+        result[27] = '112'
+        result[28] = '113'
+        result[29] = '114'
+        result[30] = '120'
+        result[31] = '121'
+        result[32] = '122'
+        result[33] = '123'
+        result[34] = '124'
+        result[35] = '130'
+        result[36] = '131'
+        result[37] = '132'
+        result[38] = '133'
+        result[39] = '134'
+        result[40] = '200'
+        result[41] = '201'
+        result[42] = '202'
+        result[43] = '203'
+        result[44] = '204'
+        result[45] = '210'
+        result[46] = '211'
+        result[47] = '212'
+        result[48] = '213'
+        result[49] = '214'
+        result[50] = '220'
+        result[51] = '221'
+        result[52] = '222'
+        result[53] = '223'
+        result[54] = '224'
+        result[55] = '230'
+        result[56] = '231'
+        result[57] = '232'
+        result[58] = '233'
+        result[59] = '234'
+
+        return result
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -66,16 +115,12 @@ class Agent():
             self.exploration_rate = self.exploration_min * 2
         return model
 
-    def calculateActionIndex(self,action):
-          value=('%s%s' % (action[0],action[1]))
-          mapIndex=list(self.actionMap.keys())[list(self.actionMap.values()).index(value)]
-          return mapIndex
-
     def calculateActionFromIndex(self, index):
         result ={}
         semiAction=self.actionMap[index]
         result[0]=int(semiAction[0])
         result[1]=int(semiAction[1])
+        result[2]=int(semiAction[2])
         return result
 
     def save_model(self):
