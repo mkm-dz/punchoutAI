@@ -112,7 +112,7 @@ class Agent():
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
             model = load_model(self.weight_backup)
-            #self.exploration_rate = self.exploration_min
+            self.exploration_rate = self.exploration_min
         return model
 
     def calculateActionFromIndex(self, index):
