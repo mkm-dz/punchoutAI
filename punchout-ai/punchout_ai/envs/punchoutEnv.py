@@ -17,11 +17,11 @@ class punchoutAIEnv(gym.Env):
         self.punchUtils = punchUtils()
         self._observation = []
         self.observation_space = spaces.Dict({
-            "opponent_id": spaces.Discrete(255),
-            "opponent_action": spaces.Discrete(255),
-            "opponentTimer": spaces.Discrete(255),
-            "secondary_opponent_action": spaces.Discrete(255),
-            "hearts": spaces.Discrete(255),
+            "opponent_id": spaces.Discrete(10),
+            "opponent_action": spaces.Discrete(50),
+            "opponentTimer": spaces.Discrete(100),
+            "secondary_opponent_action": spaces.Discrete(50),
+            "hearts": spaces.Discrete(50),
             "stars": spaces.Discrete(4),
             "canThrowPunches": spaces.Discrete(2)
         })
@@ -55,6 +55,9 @@ class punchoutAIEnv(gym.Env):
             observation = np.reshape(observation, [1, self.observation_space.n])
             reward = self.computeReward(_next_state)
             done = self.computeDone(_next_state)
+            if(done and _next_state.result=='1'):
+                reward+=30
+
             return observation, reward, done, {}
 
     def reset(self):
@@ -103,6 +106,9 @@ class punchoutAIEnv(gym.Env):
 
         if(wasMacHit < 0):
             result += -5
+            # It is even worst if we get hit when flashing pink
+            if(canThrowPunches == 0):
+                result += -5
         elif(wasMacHit > 0):
             result += 5
         elif(wasMacHit == 0 and canThrowPunches != 0):

@@ -15,17 +15,17 @@ class Agent():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "VonKaiser.h5py"
+        self.weight_backup = "VonKaizer.h5py"
         self.state_size = state_size
         self.action_space =  action_space
         self.action_space_size = 1
         for index in range(0, action_space.n):
             self.action_space_size *= action_space.spaces[index].n
-        self.learning_rate = 0.005
+        self.learning_rate = 0.05
         self.gamma = 0.95
         self.exploration_rate = 1.0
-        self.exploration_min = 0.30
-        self.exploration_decay = 0.999
+        self.exploration_min = 0.15
+        self.exploration_decay = 0.9999
         self.brain = self._build_model()
 
     def createMapping(self):
@@ -104,15 +104,15 @@ class Agent():
         model = Sequential()
         model.add(Dense(self.state_size, input_dim=self.state_size, 
         activation='relu'))
-        model.add(Dense(self.action_space_size + 2, activation='relu'))
-        model.add(Dense(self.action_space_size, activation='relu'))
+        model.add(Dense((self.state_size+(self.action_space_size* 2)), activation='relu'))
+        model.add(Dense(self.action_space_size*2, activation='relu'))
         model.add(Dense(self.action_space_size))
         self.actionMap = self.createMapping()
 
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
             model = load_model(self.weight_backup)
-            self.exploration_rate = self.exploration_min * 2
+            #self.exploration_rate = self.exploration_min
         return model
 
     def calculateActionFromIndex(self, index):
@@ -125,6 +125,7 @@ class Agent():
 
     def save_model(self):
         self.brain.save(self.weight_backup)
+        #pass
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:
