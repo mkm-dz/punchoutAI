@@ -30,7 +30,7 @@ class punchoutAIEnv(gym.Env):
             # [0,2] Timing (How much should mac wait before making the move): Low (low) 5 frames, Medium (11 frames), High (18 frames)
             # [0,3] None, A, B, Start
             # [0,4] None, Up, Right, Down, Left
-            
+
             spaces.Discrete(3),
             spaces.Discrete(4),
             spaces.Discrete(5),
