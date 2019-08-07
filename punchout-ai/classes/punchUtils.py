@@ -28,25 +28,27 @@ class punchUtils():
         tempCommands = self.SetButtons(False,False,False,False,False,False,False,'Low')
 
         if(agentAction[0] == 1):
-            tempCommands['Timing'] = 'Medium'
-        elif(agentAction[0] == 2):
-            tempCommands['Timing'] = 'High'
-
-        if(agentAction[1] == 1):
             tempCommands['A'] = True
-        elif(agentAction[1] == 2):
+        elif(agentAction[0] == 2):
             tempCommands['B'] = True
-        elif(agentAction[1] == 3):
+        elif(agentAction[0] == 3):
             tempCommands['Start'] = True
 
-        if(agentAction[2] == 1):
+        if(agentAction[1] == 1):
             tempCommands['Up'] = True
-        elif(agentAction[2] == 2):
+        elif(agentAction[1] == 2):
             tempCommands['Right'] = True
-        elif(agentAction[2] == 3):
+        elif(agentAction[1] == 3):
             tempCommands['Down'] = True
-        elif(agentAction[2] == 4):
+        elif(agentAction[1] == 4):
             tempCommands['Left'] = True
+
+        if(agentAction[2] == 1):
+            tempCommands['Timing'] = 'Medium'
+        elif(agentAction[2] == 2):
+            tempCommands['Timing'] = 'High'
+
+
 
         return tempCommands
 
