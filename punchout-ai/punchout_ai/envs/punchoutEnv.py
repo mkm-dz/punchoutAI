@@ -27,14 +27,13 @@ class punchoutAIEnv(gym.Env):
         })
 
         self.action_space = spaces.Tuple([
-            # The first array is the lowest accepted values
-            # The second is the highest accepted values
+            # [0,2] Timing (How much should mac wait before making the move): Low (low) 5 frames, Medium (11 frames), High (18 frames)
             # [0,3] None, A, B, Start
             # [0,4] None, Up, Right, Down, Left
-            # [0,2] Timing (How much should mac wait before making the move): Low (low) 5 frames, Medium (11 frames), High (18 frames)
+            
+            spaces.Discrete(3),
             spaces.Discrete(4),
             spaces.Discrete(5),
-            spaces.Discrete(3),
         ])
 
         self.observation_space.n = len(self.observation_space.spaces)
@@ -105,13 +104,13 @@ class punchoutAIEnv(gym.Env):
             didMacHit = 0
 
         if(wasMacHit < 0):
-            result += -5
+            result += wasMacHit
             # It is even worst if we get hit when flashing pink
             if(canThrowPunches == 0):
                 result += -5
         elif(wasMacHit > 0):
             result += 5
-        elif(wasMacHit == 0 and canThrowPunches != 0):
+        elif(wasMacHit == 0 and canThrowPunches != 0 and hearthWasLost >= 0):
             # Mac avoided being hit
             result += 1
         wasMacHit = 0
