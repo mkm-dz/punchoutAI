@@ -11,7 +11,7 @@ from classes.AgentActionWrapper import AgentActionWrapper
 class Program:
     def __init__(self):
         self.episodes =500
-        self.full_range =3
+        self.full_range =10
         self.env = gym.make("punchoutAI-v0")
 
         self.state_size = self.env.observation_space.n
@@ -41,9 +41,8 @@ class Program:
                         command.agentAction = action
                         command.envCommand = 'sendButtons'
                         next_state, reward, done, _ = self.env.step(command)
-
                         self.agent.remember(
-                            state, next_state, reward)
+                            state, next_state, reward, action)
                         totalReward += reward
                         counter+=1
                     print("Episode:|{}|Total Reward:|{}".format(index_episode, (totalReward/counter)))

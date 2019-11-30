@@ -25,7 +25,7 @@ class Agent():
         self.gamma = 0.95
         self.exploration_rate = 1.0
         self.exploration_min = 0.15
-        self.exploration_decay = 0.9999
+        self.exploration_decay = 0.9995
         self.brain = self._build_model()
 
     def createMapping(self):
@@ -98,6 +98,13 @@ class Agent():
         result[59] = '234'
 
         return result
+    
+    def calculateIndexFromAction(self, action):
+        castedAction = "{}{}{}".format(action[0],action[1],action[2])
+        for index in range(0, len(self.actionMap)):
+            if (self.actionMap[index] == castedAction):
+                return index
+        return -1
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -109,7 +116,7 @@ class Agent():
         model.add(Dense(self.action_space_size))
         self.actionMap = self.createMapping()
 
-        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.learning_rate), metrics=['accuracy'])
         if os.path.isfile(self.weight_backup):
             model = load_model(self.weight_backup)
             self.exploration_rate = self.exploration_min
@@ -125,7 +132,6 @@ class Agent():
 
     def save_model(self):
         self.brain.save(self.weight_backup)
-        #pass
 
     def act(self, state):
         if np.random.rand() <= self.exploration_rate:
@@ -139,11 +145,13 @@ class Agent():
         return self.calculateActionFromIndex(maxValueIndex)
 
     # Updates the Q Table
-    def remember(self, state, new_state, reward):
-        highest_action_value = np.argmax(self.brain.predict(state))
-        target = reward + ((self.gamma) * np.max(self.brain.predict(new_state)))
-        target_vec = self.brain.predict(state)[0]
-        target_vec[highest_action_value] = target
-        self.brain.fit(state, target_vec.reshape(-1, self.action_space_size), epochs=1, verbose=0)
+    def remember(self, state, new_state, reward, action):
+        target = self.brain.predict(state)
+        # TODO: Verify this logic
+#       highest_action_value = np.argmax(target)
+        highest_action_value = self.calculateIndexFromAction(action)
+        q_future = np.max(self.brain.predict(new_state)[0])
+        target[0][highest_action_value] = reward + (self.gamma * q_future)
+        self.brain.fit(state, target, epochs=1, verbose=0)
         if self.exploration_rate > self.exploration_min:
             self.exploration_rate *= self.exploration_decay
