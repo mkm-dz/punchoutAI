@@ -10,7 +10,7 @@ class Payload(object):
 
 
 class BizHawkClient():
-    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"c:\\\\users\\\\user\\\\Desktop\\\\punchOut\\\\punchOut2.state"}'
+    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"d:\\\\documents\\\\Documentation\\\\punchOut\\\\punchOut2.state"}'
 
     server_address = None
     hit = False

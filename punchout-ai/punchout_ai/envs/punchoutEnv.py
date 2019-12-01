@@ -64,7 +64,7 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = 96
         self.previousHearths = -1000
         self.punchUtils.sendCommand('reset')
-        self.WaitForServer()
+        return self.WaitForServer()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
