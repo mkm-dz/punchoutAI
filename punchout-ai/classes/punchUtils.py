@@ -3,6 +3,74 @@ from gym import error, spaces
 import numpy as np
 
 class punchUtils():
+    def __init__(self):
+        # We have an output space of 60 possible actions (moves)
+
+        # we map each one to a controller action
+        # First digit = timin 0-Low 1-Medium 2-High
+        # second digit = buttons 0-None 1-A 2-B 3-Start
+        # third digit = direction 0-None 1-Up 2-Right 3-Down 4-Left
+        self.actionMap={}
+        self.actionMap[0] =  '000'
+        self.actionMap[1] =  '001'
+        self.actionMap[2] =  '002'
+        self.actionMap[3] =  '003'
+        self.actionMap[4] =  '004'
+        self.actionMap[5] =  '010'
+        self.actionMap[6] =  '011'
+        self.actionMap[7] =  '012'
+        self.actionMap[8] =  '013'
+        self.actionMap[9] =  '014'
+        self.actionMap[10] = '020'
+        self.actionMap[11] = '021'
+        self.actionMap[12] = '022'
+        self.actionMap[13] = '023'
+        self.actionMap[14] = '024'
+        self.actionMap[15] = '030'
+        self.actionMap[16] = '031'
+        self.actionMap[17] = '032'
+        self.actionMap[18] = '033'
+        self.actionMap[19] = '034'
+        self.actionMap[20] = '100'
+        self.actionMap[21] = '101'
+        self.actionMap[22] = '102'
+        self.actionMap[23] = '103'
+        self.actionMap[24] = '104'
+        self.actionMap[25] = '110'
+        self.actionMap[26] = '111'
+        self.actionMap[27] = '112'
+        self.actionMap[28] = '113'
+        self.actionMap[29] = '114'
+        self.actionMap[30] = '120'
+        self.actionMap[31] = '121'
+        self.actionMap[32] = '122'
+        self.actionMap[33] = '123'
+        self.actionMap[34] = '124'
+        self.actionMap[35] = '130'
+        self.actionMap[36] = '131'
+        self.actionMap[37] = '132'
+        self.actionMap[38] = '133'
+        self.actionMap[39] = '134'
+        self.actionMap[40] = '200'
+        self.actionMap[41] = '201'
+        self.actionMap[42] = '202'
+        self.actionMap[43] = '203'
+        self.actionMap[44] = '204'
+        self.actionMap[45] = '210'
+        self.actionMap[46] = '211'
+        self.actionMap[47] = '212'
+        self.actionMap[48] = '213'
+        self.actionMap[49] = '214'
+        self.actionMap[50] = '220'
+        self.actionMap[51] = '221'
+        self.actionMap[52] = '222'
+        self.actionMap[53] = '223'
+        self.actionMap[54] = '224'
+        self.actionMap[55] = '230'
+        self.actionMap[56] = '231'
+        self.actionMap[57] = '232'
+        self.actionMap[58] = '233'
+        self.actionMap[59] = '234'
 
     def sendCommand(self, command: str, buttons=None):
         client = BizHawkClient()
@@ -61,3 +129,22 @@ class punchUtils():
             'canThrowPunches': state.p1['canThrowPunches']
         })
         return np.fromiter(castedSpaces.spaces.values(), dtype=int)
+
+    def calculateActionFromIndex(self, index):
+        result ={}
+        semiAction=self.actionMap[index]
+        result[0]=int(semiAction[0])
+        result[1]=int(semiAction[1])
+        result[2]=int(semiAction[2])
+        return result
+
+    def castObservationArrayToObservation(self, observation_array):
+        return spaces.Dict({
+            'opponent_id': observation_array[0][4],
+            'opponent_action': observation_array[0][3],
+            'opponentTimer': observation_array[0][2],
+            'secondary_opponent_action': observation_array[0][5],
+            'hearts': observation_array[0][1],
+            'stars': observation_array[0][6],
+            'canThrowPunches': observation_array[0][0]
+        })

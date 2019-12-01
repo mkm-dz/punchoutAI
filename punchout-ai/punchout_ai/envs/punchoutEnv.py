@@ -64,7 +64,9 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = 96
         self.previousHearths = -1000
         self.punchUtils.sendCommand('reset')
-        return self.WaitForServer()
+        rawObservation = self.WaitForServer()
+        castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation)
+        return np.reshape(castedObservation, [1, self.observation_space.n])
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
