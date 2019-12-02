@@ -23,39 +23,6 @@ class Program:
             print("*********** SEPARATION *************")
             self.agent_runner.run(self.env)
 
-            # try:
-            #     for index_episode in range(self.episodes):
-            #         self.env.reset()
-            #         done = False
-            #         totalReward = 0
-            #         counter = 0
-            #         command = {}
-            #         command = AgentActionWrapper()
-            #         while not done:
-            #             # Wait for oponent action
-            #             command.agentAction = None
-            #             command.envCommand = 'resume'
-            #             state, reward, done, _ = self.env.step(command)
-
-            #             # Send the action proposed by the agent, execute it and wait for the new state
-            #             command.agentAction = action
-            #             command.envCommand = 'sendButtons'
-            #             next_state, reward, done, _ = self.env.step(command)
-
-            #             self.agent.remember(
-            #                 state, next_state, reward)
-            #             totalReward += reward
-            #             counter+=1
-            #         print("Episode:|{}|Total Reward:|{}".format(index_episode, (totalReward/counter)))
-            # except:
-            #     e = sys.exc_info()[0]
-            #     print( "<p>Error: %s</p>" % e )
-            # finally:
-            #     self.agent.save_model()
-            #     print(self.agent.brain.summary())
-            #     pass
-
-
 if __name__ == "__main__":
     program = Program()
     program.run()
