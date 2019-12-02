@@ -32,15 +32,17 @@ class MyAgentCallback(Callback):
         self.command.envCommand = 'resume'
         self.command.agentAction = None
 
-    def on_step_begin(self, step, logs={}):
-        # Called at beginning of each step
+    def on_step_end(self, step, logs={}):
+        # Called at end of each step
         print("** Step End")
 
     def on_action_begin(self, action, logs={}):
-        print("** Action Begin")
+        pass
+        #print("** Action Begin")
 
     def on_action_end(self, action, logs={}):
-        print("** Action End")
+        pass
+        #print("** Action End")
 
 
 class MyProcessor(Processor):
@@ -50,11 +52,15 @@ class MyProcessor(Processor):
         super(Processor, self)
 
     def process_observation(self, observation):
+        print ("I see:")
+        print(self.punchUtils.castObservationArrayToObservation(observation))
         return observation
 
     def process_action(self, action_index):
         self.wrapper.agentAction = self.punchUtils.calculateActionFromIndex(action_index)
         self.wrapper.envCommand = 'sendButtons'
+        print ("I do:")
+        print(self.punchUtils.castAgentActionToEmuAction(self.wrapper.agentAction))
         return self.wrapper
 
     def process_state_batch(self, batch):
@@ -83,7 +89,7 @@ class KerasAgentRunner():
         model.add(Flatten())
         model.add(Dense(self.action_space_size, activation='linear'))
 
-        memory = SequentialMemory(limit=50000, window_length=1)
+        memory = SequentialMemory(limit=500000, window_length=1)
         policy = BoltzmannQPolicy()
         self.dqn = DQNAgent(model=model, processor=MyProcessor(),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=10,
         target_model_update=1e-2, policy=policy)
