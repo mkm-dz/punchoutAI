@@ -19,6 +19,10 @@ from classes.AgentActionWrapper import AgentActionWrapper
 from classes.punchUtils import punchUtils
 
 class MyAgentCallback(Callback):
+    def __init__(self, episode_end_callback):
+        self.episode_end_callback = episode_end_callback
+        super(Callback, self)
+
     def on_episode_begin(self, episode, logs={}):
         self.command = AgentActionWrapper()
 
@@ -43,6 +47,9 @@ class MyAgentCallback(Callback):
     def on_action_end(self, action, logs={}):
         pass
         #print("** Action End")
+
+    def on_train_end(self, logs={}):
+        self.episode_end_callback()
 
 
 class MyProcessor(Processor):
@@ -70,7 +77,7 @@ class KerasAgentRunner():
 
     brain=None
     def __init__(self, state_size, action_space):
-        self.weight_backup = "VonKaizer.h5py"
+        self.weight_backup = "VonKaizer"
         self.state_size = state_size
         self.action_space =  action_space
         self.action_space_size = 1
@@ -96,9 +103,6 @@ class KerasAgentRunner():
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         return model
 
-    def save_model(self):
-        self.brain.save(self.weight_backup)
-
     def getRandomAction(self, observation):
         result={}
         spacesLength=len(self.action_space.spaces)
@@ -106,10 +110,14 @@ class KerasAgentRunner():
             result[index]=random.randint(0, self.action_space.spaces[index].n-1)
         return result
 
+    def save_model(self):
+        self.brain.save(self.weight_backup+".h5py")
+        self.dqn.save_weights(self.weight_backup+".dqn", True)
+
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
-        callback = [MyAgentCallback()]
-        self.dqn.fit(env,nb_steps=1750000,
+        callback = [MyAgentCallback(self.save_model)]
+        self.dqn.fit(env,nb_steps=5000,
         visualize=True,
         verbose=2,
         callbacks=callback,
