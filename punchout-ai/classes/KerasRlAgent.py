@@ -19,8 +19,10 @@ from classes.AgentActionWrapper import AgentActionWrapper
 from classes.punchUtils import punchUtils
 
 class MyAgentCallback(Callback):
-    def __init__(self, episode_end_callback):
+    def __init__(self,episode_begin_callback, episode_end_callback, verbose=False):
         self.episode_end_callback = episode_end_callback
+        self.episode_begin_callback = episode_begin_callback
+        self.verbose = verbose
         super(Callback, self)
 
     def on_episode_begin(self, episode, logs={}):
@@ -32,13 +34,15 @@ class MyAgentCallback(Callback):
 
     def on_step_begin(self, step, logs={}):
         # Called at beginning of each step
-        print("** Step Begin")
+        if(self.verbose):
+            print("** Step Begin")
         self.command.envCommand = 'resume'
         self.command.agentAction = None
 
     def on_step_end(self, step, logs={}):
         # Called at end of each step
-        print("** Step End")
+        if(self.verbose):
+            print("** Step End")
 
     def on_action_begin(self, action, logs={}):
         pass
@@ -51,23 +55,28 @@ class MyAgentCallback(Callback):
     def on_train_end(self, logs={}):
         self.episode_end_callback()
 
+    def on_train_begin(self, logs={}):
+        self.episode_begin_callback()
 
 class MyProcessor(Processor):
-    def __init__(self):
+    def __init__(self, verbose):
         self.punchUtils = punchUtils()
         self.wrapper = AgentActionWrapper()
+        self.verbose = verbose
         super(Processor, self)
 
     def process_observation(self, observation):
-        print ("I see:")
-        print(self.punchUtils.castObservationArrayToObservation(observation))
+        if(self.verbose):
+            print ("I see:")
+            print(self.punchUtils.castObservationArrayToObservation(observation))
         return observation
 
     def process_action(self, action_index):
         self.wrapper.agentAction = self.punchUtils.calculateActionFromIndex(action_index)
         self.wrapper.envCommand = 'sendButtons'
-        print ("I do:")
-        print(self.punchUtils.castAgentActionToEmuAction(self.wrapper.agentAction))
+        if(self.verbose):
+            print ("I do:")
+            print(self.punchUtils.castAgentActionToEmuAction(self.wrapper.agentAction))
         return self.wrapper
 
     def process_state_batch(self, batch):
@@ -76,6 +85,7 @@ class MyProcessor(Processor):
 class KerasAgentRunner():
 
     brain=None
+    verbose = True
     def __init__(self, state_size, action_space):
         self.weight_backup = "VonKaizer"
         self.state_size = state_size
@@ -98,7 +108,7 @@ class KerasAgentRunner():
 
         memory = SequentialMemory(limit=500000, window_length=1)
         policy = BoltzmannQPolicy()
-        self.dqn = DQNAgent(model=model, processor=MyProcessor(),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=10,
+        self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=10,
         target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         return model
@@ -111,13 +121,16 @@ class KerasAgentRunner():
         return result
 
     def save_model(self):
-        self.brain.save(self.weight_backup+".h5py")
         self.dqn.save_weights(self.weight_backup+".dqn", True)
+
+    def load_model(self):
+        if os.path.isfile(self.weight_backup):
+            self.dqn.load_weights(self.weight_backup+".dqn")
 
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
-        callback = [MyAgentCallback(self.save_model)]
-        self.dqn.fit(env,nb_steps=5000,
+        callback = [MyAgentCallback(self.load_model, self.save_model, self.verbose)]
+        self.dqn.fit(env,nb_steps=30000,
         visualize=True,
         verbose=2,
         callbacks=callback,
