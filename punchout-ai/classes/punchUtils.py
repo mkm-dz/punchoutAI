@@ -126,7 +126,7 @@ class punchUtils():
             'secondary_opponent_action': state.p2['secondaryAction'],
             'hearts': state.p1['hearts'],
             'stars': state.p1['stars'],
-            'canThrowPunches': state.p1['canThrowPunches']
+            'blinkingPink': state.p1['blinkingPink']
         })
         return np.fromiter(castedSpaces.spaces.values(), dtype=int)
 
@@ -146,5 +146,5 @@ class punchUtils():
             'secondary_opponent_action': observation_array[0][5],
             'hearts': observation_array[0][1],
             'stars': observation_array[0][6],
-            'canThrowPunches': observation_array[0][0]
+            'blinkingPink': observation_array[0][0]
         })

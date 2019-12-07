@@ -23,7 +23,7 @@ class punchoutAIEnv(gym.Env):
             "secondary_opponent_action": spaces.Discrete(50),
             "hearts": spaces.Discrete(50),
             "stars": spaces.Discrete(4),
-            "canThrowPunches": spaces.Discrete(2)
+            "blinkingPink": spaces.Discrete(2)
         })
 
         self.action_space = spaces.Tuple([
@@ -89,7 +89,7 @@ class punchoutAIEnv(gym.Env):
 
     def computeReward(self, observation):
         result = 0
-        canThrowPunches = observation.p1['canThrowPunches']
+        blinkingPink = observation.p1['blinkingPink']
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
         didMacHit = observation.p1['score']-self.previousScore
@@ -108,11 +108,11 @@ class punchoutAIEnv(gym.Env):
         if(wasMacHit < 0):
             result += wasMacHit
             # It is even worst if we get hit when flashing pink
-            if(canThrowPunches == 0):
+            if(blinkingPink == 1):
                 result += -5
         elif(wasMacHit > 0):
             result += 5
-        elif(wasMacHit == 0 and canThrowPunches != 0 and hearthWasLost >= 0):
+        elif(wasMacHit == 0 and hearthWasLost >= 0):
             # Mac avoided being hit
             result += 1
         wasMacHit = 0
