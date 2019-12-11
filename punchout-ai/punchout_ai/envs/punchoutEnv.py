@@ -54,8 +54,11 @@ class punchoutAIEnv(gym.Env):
             observation = np.reshape(observation, [1, self.observation_space.n])
             reward = self.computeReward(_next_state)
             done = self.computeDone(_next_state)
-            if(done and _next_state.result=='1'):
-                reward+=30
+            if(done):
+                if (_next_state.result=='1'):
+                    reward+=30
+                elif(_next_state.result=='2'):
+                    reward += -50
 
             return observation, reward, done, {}
 
