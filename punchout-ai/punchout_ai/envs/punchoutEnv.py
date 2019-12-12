@@ -23,7 +23,7 @@ class punchoutAIEnv(gym.Env):
             "secondary_opponent_action": spaces.Discrete(50),
             "hearts": spaces.Discrete(50),
             "stars": spaces.Discrete(4),
-            "canThrowPunches": spaces.Discrete(2)
+            "blinkingPink": spaces.Discrete(2)
         })
 
         self.action_space = spaces.Tuple([
@@ -54,8 +54,11 @@ class punchoutAIEnv(gym.Env):
             observation = np.reshape(observation, [1, self.observation_space.n])
             reward = self.computeReward(_next_state)
             done = self.computeDone(_next_state)
-            if(done and _next_state.result=='1'):
-                reward+=30
+            if(done):
+                if (_next_state.result=='1'):
+                    reward+=30
+                elif(_next_state.result=='2'):
+                    reward += -50
 
             return observation, reward, done, {}
 
@@ -64,7 +67,9 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = 96
         self.previousHearths = -1000
         self.punchUtils.sendCommand('reset')
-        self.WaitForServer()
+        rawObservation = self.WaitForServer()
+        castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation)
+        return np.reshape(castedObservation, [1, self.observation_space.n])
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -87,7 +92,7 @@ class punchoutAIEnv(gym.Env):
 
     def computeReward(self, observation):
         result = 0
-        canThrowPunches = observation.p1['canThrowPunches']
+        blinkingPink = observation.p1['blinkingPink']
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
         didMacHit = observation.p1['score']-self.previousScore
@@ -106,11 +111,11 @@ class punchoutAIEnv(gym.Env):
         if(wasMacHit < 0):
             result += wasMacHit
             # It is even worst if we get hit when flashing pink
-            if(canThrowPunches == 0):
+            if(blinkingPink == 1):
                 result += -5
         elif(wasMacHit > 0):
             result += 5
-        elif(wasMacHit == 0 and canThrowPunches != 0 and hearthWasLost >= 0):
+        elif(wasMacHit == 0 and hearthWasLost >= 0):
             # Mac avoided being hit
             result += 1
         wasMacHit = 0
