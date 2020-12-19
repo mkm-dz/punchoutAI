@@ -2,12 +2,14 @@
 import gym
 import random
 import os
+import tensorflow as tf
 import numpy as np
+import tensorflow.keras as keras
 
-from keras.models import Sequential
-from keras.layers import Dense, Flatten
-from keras.optimizers import Adam
-from keras import backend as K
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import backend as K
 
 from rl.agents.dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy

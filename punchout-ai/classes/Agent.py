@@ -2,14 +2,16 @@
 import gym
 import random
 import os
+import tensorflow as tf
 import numpy as np
+import tensorflow.keras as keras
 
 from collections import deque
-from keras.models import Sequential
-from keras.models import load_model
-from keras.layers import Dense
-from keras.optimizers import Adam
-from keras import backend as K
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import backend as K
 
 class Agent():
 
