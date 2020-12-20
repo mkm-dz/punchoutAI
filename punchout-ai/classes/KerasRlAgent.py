@@ -5,6 +5,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import tensorflow.keras as keras
+import pathlib
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten
@@ -28,10 +29,28 @@ class MyAgentCallback(Callback):
         super(Callback, self)
 
     def on_episode_begin(self, episode, logs={}):
+        self.rewardArray = []
+        self.rewardIndex = -1
         self.command = AgentActionWrapper()
 
     def on_episode_end(self, episode, logs={}):
         """Called at end of each episode"""
+        episode_reward = 0
+        reward_index = 0
+        for item in self.rewardArray:
+            if(reward_index == len(self.rewardArray)-1):
+                break
+
+            episode_reward = episode_reward + item
+            reward_index = reward_index + 1
+
+        if(self.verbose):
+            print(episode_reward)
+
+        logPath = os.path.join(pathlib.Path().absolute() ,'ElMarrano.log')
+        with open(logPath, 'a') as log_file:
+            log_file.write(str(episode_reward)+'\n')
+
         pass
 
     def on_step_begin(self, step, logs={}):
@@ -40,9 +59,12 @@ class MyAgentCallback(Callback):
             print("** Step Begin")
         self.command.envCommand = 'resume'
         self.command.agentAction = None
+        self.rewardIndex = self.rewardIndex + 1
 
     def on_step_end(self, step, logs={}):
         # Called at end of each step
+        if(logs['reward'] is not None):
+            self.rewardArray.append(float(logs['reward']))
         if(self.verbose):
             print("** Step End")
 
@@ -87,9 +109,9 @@ class MyProcessor(Processor):
 class KerasAgentRunner():
 
     brain=None
-    verbose = True
+    verbose = False
     def __init__(self, state_size, action_space):
-        self.weight_backup = "VonKaizer"
+        self.weight_backup = "ElMarrano"
         self.state_size = state_size
         self.action_space =  action_space
         self.action_space_size = 1
@@ -98,6 +120,9 @@ class KerasAgentRunner():
         self.brain = self._build_model()
 
     def _build_model(self):
+        logPath = os.path.join(pathlib.Path().absolute() , 'ElMarrano.log')
+        with open(logPath, 'w+'):
+            pass
         # Neural Net for Deep-Q learning Model
         model = Sequential()
 
@@ -110,7 +135,7 @@ class KerasAgentRunner():
 
         memory = SequentialMemory(limit=500000, window_length=1)
         policy = BoltzmannQPolicy()
-        self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=10,
+        self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=200,
         target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         return model
@@ -132,7 +157,7 @@ class KerasAgentRunner():
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
         callback = [MyAgentCallback(self.load_model, self.save_model, self.verbose)]
-        self.dqn.fit(env,nb_steps=30000,
+        self.dqn.fit(env,nb_steps=10000,
         visualize=True,
         verbose=2,
         callbacks=callback,
