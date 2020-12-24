@@ -1,6 +1,7 @@
 from classes.bizhawkClient import BizHawkClient
 from gym import error, spaces
 import numpy as np
+from tensorflow.keras.utils import to_categorical 
 
 class punchUtils():
     def __init__(self):
@@ -118,7 +119,7 @@ class punchUtils():
 
         return tempCommands
 
-    def castEmuStateToObservation(self, state):
+    def castEmuStateToObservation(self, state, state_shape):
         castedSpaces = spaces.Dict({
             'opponent_id': state.p2['character'],
             'opponent_action': state.p2['action'],
@@ -126,9 +127,22 @@ class punchUtils():
             'secondary_opponent_action': state.p2['secondaryAction'],
             'hearts': state.p1['hearts'],
             'stars': state.p1['stars'],
-            'blinkingPink': state.p1['blinkingPink']
+            'blinkingPink': state.p1['blinkingPink'],
+            'bersekerAction': state.p1['bersekerAction']
         })
-        return np.fromiter(castedSpaces.spaces.values(), dtype=int)
+
+        # Each observation will be represented as a keras categorical value: a n
+        # bits number with a single "1" that represents the category, where n is
+        # the length of the dimension as specified in the spaces. We then flatten
+        # the result array to get a single binary string that represents the full
+        # state.
+
+        result_array = []
+        for item in castedSpaces.spaces.keys():
+            classes = state_shape.spaces[item]
+            result_array.append(to_categorical(np.unique(castedSpaces.spaces[item])[0], num_classes = np.unique(classes)[0].n, dtype ="int32"))
+        flattened_spaces = [item for sublist in result_array for item in sublist]
+        return flattened_spaces
 
     def calculateActionFromIndex(self, index):
         result ={}
@@ -137,14 +151,3 @@ class punchUtils():
         result[1]=int(semiAction[1])
         result[2]=int(semiAction[2])
         return result
-
-    def castObservationArrayToObservation(self, observation_array):
-        return spaces.Dict({
-            'opponent_id': observation_array[0][4],
-            'opponent_action': observation_array[0][3],
-            'opponentTimer': observation_array[0][2],
-            'secondary_opponent_action': observation_array[0][5],
-            'hearts': observation_array[0][1],
-            'stars': observation_array[0][6],
-            'blinkingPink': observation_array[0][0]
-        })

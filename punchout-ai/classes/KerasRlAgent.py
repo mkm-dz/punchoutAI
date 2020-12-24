@@ -18,7 +18,6 @@ from rl.memory import SequentialMemory
 from rl.core import Processor
 from rl.callbacks import Callback
 
-from classes.AgentActionWrapper import AgentActionWrapper
 from classes.punchUtils import punchUtils
 
 class MyAgentCallback(Callback):
@@ -29,27 +28,14 @@ class MyAgentCallback(Callback):
         super(Callback, self)
 
     def on_episode_begin(self, episode, logs={}):
-        self.rewardArray = []
-        self.rewardIndex = -1
-        self.command = AgentActionWrapper()
+        pass
 
     def on_episode_end(self, episode, logs={}):
         """Called at end of each episode"""
-        episode_reward = 0
-        reward_index = 0
-        for item in self.rewardArray:
-            if(reward_index == len(self.rewardArray)-1):
-                break
-
-            episode_reward = episode_reward + item
-            reward_index = reward_index + 1
-
-        if(self.verbose):
-            print(episode_reward)
-
-        logPath = os.path.join(pathlib.Path().absolute() ,'ElMarrano.log')
-        with open(logPath, 'a') as log_file:
-            log_file.write(str(episode_reward)+'\n')
+        if(logs['episode_reward'] is not None):
+            logPath = os.path.join(pathlib.Path().absolute() ,'CrystalJoe.log')
+            with open(logPath, 'a') as log_file:
+                 log_file.write(str(logs['episode_reward'])+'\n')
 
         pass
 
@@ -57,24 +43,19 @@ class MyAgentCallback(Callback):
         # Called at beginning of each step
         if(self.verbose):
             print("** Step Begin")
-        self.command.envCommand = 'resume'
-        self.command.agentAction = None
-        self.rewardIndex = self.rewardIndex + 1
 
     def on_step_end(self, step, logs={}):
         # Called at end of each step
-        if(logs['reward'] is not None):
-            self.rewardArray.append(float(logs['reward']))
         if(self.verbose):
             print("** Step End")
 
     def on_action_begin(self, action, logs={}):
-        pass
-        #print("** Action Begin")
+        if(self.verbose):
+            print("** Action Begin")
 
     def on_action_end(self, action, logs={}):
-        pass
-        #print("** Action End")
+        if(self.verbose):
+            print("** Action End")
 
     def on_train_end(self, logs={}):
         self.episode_end_callback()
@@ -85,23 +66,20 @@ class MyAgentCallback(Callback):
 class MyProcessor(Processor):
     def __init__(self, verbose):
         self.punchUtils = punchUtils()
-        self.wrapper = AgentActionWrapper()
         self.verbose = verbose
         super(Processor, self)
 
     def process_observation(self, observation):
         if(self.verbose):
             print ("I see:")
-            print(self.punchUtils.castObservationArrayToObservation(observation))
+            #print(self.punchUtils.castObservationArrayToObservation(observation))
         return observation
 
     def process_action(self, action_index):
-        self.wrapper.agentAction = self.punchUtils.calculateActionFromIndex(action_index)
-        self.wrapper.envCommand = 'sendButtons'
         if(self.verbose):
             print ("I do:")
-            print(self.punchUtils.castAgentActionToEmuAction(self.wrapper.agentAction))
-        return self.wrapper
+            print(self.punchUtils.castAgentActionToEmuAction(action_index))
+        return action_index
 
     def process_state_batch(self, batch):
         return batch
@@ -111,31 +89,29 @@ class KerasAgentRunner():
     brain=None
     verbose = False
     def __init__(self, state_size, action_space):
-        self.weight_backup = "ElMarrano"
+        self.weight_backup = "CrystalJoe"
         self.state_size = state_size
         self.action_space =  action_space
-        self.action_space_size = 1
-        for index in range(0, action_space.n):
-            self.action_space_size *= action_space.spaces[index].n
+        self.action_space_size = action_space.n
         self.brain = self._build_model()
 
     def _build_model(self):
-        logPath = os.path.join(pathlib.Path().absolute() , 'ElMarrano.log')
+        logPath = os.path.join(pathlib.Path().absolute() , 'CrystalJoe.log')
         with open(logPath, 'w+'):
             pass
         # Neural Net for Deep-Q learning Model
         model = Sequential()
 
         # Not really sure this is doing what I expect it is doing (batch_size, input_dim)
-        model.add(Dense(self.state_size, input_shape=(1,) + (1, self.state_size), activation='relu'))
-        model.add(Dense(self.state_size*2, activation='relu'))
-        model.add(Dense(self.state_size*2, activation='relu'))
-        model.add(Flatten())
+        model.add(Flatten(input_shape=(1, self.state_size )))
+        model.add(Dense(int((self.state_size*3)/2), activation='relu'))
+        model.add(Dense(int(self.state_size/2), activation='relu'))
+        model.add(Dense(int(self.state_size/4), activation='relu'))
         model.add(Dense(self.action_space_size, activation='linear'))
 
-        memory = SequentialMemory(limit=500000, window_length=1)
+        memory = SequentialMemory(limit=100000, window_length=1)
         policy = BoltzmannQPolicy()
-        self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=200,
+        self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=2000,
         target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         return model
@@ -149,6 +125,7 @@ class KerasAgentRunner():
 
     def save_model(self):
         self.dqn.save_weights(self.weight_backup+".dqn", True)
+        self.dqn.model.summary()
 
     def load_model(self):
         if os.path.isfile(self.weight_backup):
@@ -157,8 +134,8 @@ class KerasAgentRunner():
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
         callback = [MyAgentCallback(self.load_model, self.save_model, self.verbose)]
-        self.dqn.fit(env,nb_steps=10000,
-        visualize=True,
+        self.dqn.fit(env,nb_steps=100000,
+        visualize=False,
         verbose=2,
         callbacks=callback,
         start_step_policy=self.getRandomAction)

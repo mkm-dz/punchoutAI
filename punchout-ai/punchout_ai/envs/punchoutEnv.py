@@ -16,51 +16,49 @@ class punchoutAIEnv(gym.Env):
         self.server = BizHawkServer()
         self.punchUtils = punchUtils()
         self._observation = []
+
         self.observation_space = spaces.Dict({
-            "opponent_id": spaces.Discrete(10),
-            "opponent_action": spaces.Discrete(50),
-            "opponentTimer": spaces.Discrete(100),
-            "secondary_opponent_action": spaces.Discrete(50),
-            "hearts": spaces.Discrete(50),
-            "stars": spaces.Discrete(4),
-            "blinkingPink": spaces.Discrete(2)
+            "opponent_id": spaces.Discrete(20),
+            "opponent_action": spaces.Discrete(256),
+            "opponentTimer": spaces.Discrete(256),
+            "secondary_opponent_action": spaces.Discrete(256),
+            "hearts": spaces.Discrete(60),
+            "stars": spaces.Discrete(20),
+            "blinkingPink": spaces.Discrete(2),
+            "bersekerAction": spaces.Discrete(256)
         })
 
-        self.action_space = spaces.Tuple([
-            # [0,2] Timing (How much should mac wait before making the move): Low (low) 5 frames, Medium (11 frames), High (18 frames)
-            # [0,3] None, A, B, Start
-            # [0,4] None, Up, Right, Down, Left
+        # Setting actions to be integers from 0 to 60, 60 matching the result array
+        # from punchoutUtils mapping
+        self.action_space = spaces.Box(low=np.array([0]),high= np.array([60]), dtype=np.int)
 
-            spaces.Discrete(3),
-            spaces.Discrete(4),
-            spaces.Discrete(5),
-        ])
+        # We do the dimension definition in here. Then we iterate through the
+        # spaces to define the final shape. We could do the full square matrix
+        # but that would take more space that is currently not required.
+        
+        space_length = 0
+        for item in self.observation_space.spaces.values():
+            space_length = space_length + item.n
 
-        self.observation_space.n = len(self.observation_space.spaces)
-        self.action_space.n = len(self.action_space.spaces)
+        self.observation_space.n = space_length
+        self.action_space.n = self.action_space.high[0]
         self.initServer()
 
-    def step(self, action):
-        if action.envCommand == 'resume':
+    def step(self, action_index):
+        agentAction = self.punchUtils.calculateActionFromIndex(action_index)
 
-            # Opponent just started an action, there is no reward for reacting.
-            return self.resumeStep(), 0, False, {}
+        # Send the buttons, and wait to see what happened (observation)
+        _next_state = self.sendActionToEmulator(agentAction)
+        observation = self.punchUtils.castEmuStateToObservation(_next_state, self.observation_space)
+        reward = self.computeReward(_next_state)
+        done = self.computeDone(_next_state)
+        if(done):
+            if (_next_state.result=='1'):
+                reward+=30
+            elif(_next_state.result=='2'):
+                reward += -50
 
-        elif action.envCommand == 'sendButtons':
-
-            # Send the buttons, and wait to see what happened (observation)
-            _next_state = self.sendActionToEmulator(action.agentAction)
-            observation = self.punchUtils.castEmuStateToObservation(_next_state)
-            observation = np.reshape(observation, [1, self.observation_space.n])
-            reward = self.computeReward(_next_state)
-            done = self.computeDone(_next_state)
-            if(done):
-                if (_next_state.result=='1'):
-                    reward+=30
-                elif(_next_state.result=='2'):
-                    reward += -50
-
-            return observation, reward, done, {}
+        return observation, reward, done, {}
 
     def reset(self):
         self.previousScore = 0
@@ -68,8 +66,8 @@ class punchoutAIEnv(gym.Env):
         self.previousHearths = -1000
         self.punchUtils.sendCommand('reset')
         rawObservation = self.WaitForServer()
-        castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation)
-        return np.reshape(castedObservation, [1, self.observation_space.n])
+        castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation, self.observation_space)
+        return castedObservation
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -109,7 +107,7 @@ class punchoutAIEnv(gym.Env):
             didMacHit = 0
 
         if(wasMacHit < 0):
-            result += wasMacHit
+            result += -5
             # It is even worst if we get hit when flashing pink
             if(blinkingPink == 1):
                 result += -5
@@ -121,7 +119,7 @@ class punchoutAIEnv(gym.Env):
         wasMacHit = 0
 
         if(hearthWasLost < 0):
-            result += -5
+            result += -3
         elif(hearthWasLost > 0):
             result += 5
         hearthWasLost = 0
@@ -144,8 +142,8 @@ class punchoutAIEnv(gym.Env):
 
         # Wait for opponent to initiate action
         emuState = self.WaitForServer()
-        observation = self.punchUtils.castEmuStateToObservation(emuState)
-        return np.reshape(observation, [1, self.observation_space.n])
+        observation = self.punchUtils.castEmuStateToObservation(emuState, self.observation_space)
+        return observation
 
     def sendActionToEmulator(self, action):
         actionButtons = self.punchUtils.castAgentActionToEmuAction(action)
