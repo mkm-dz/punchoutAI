@@ -134,8 +134,8 @@ class KerasAgentRunner():
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
         callback = [MyAgentCallback(self.load_model, self.save_model, self.verbose)]
-        self.dqn.fit(env,nb_steps=100000,
+        self.dqn.fit(env,nb_steps=30000,
         visualize=False,
-        verbose=2,
+        verbose=1,
         callbacks=callback,
         start_step_policy=self.getRandomAction)

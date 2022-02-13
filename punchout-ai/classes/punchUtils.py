@@ -124,7 +124,6 @@ class punchUtils():
             'opponent_id': state.p2['character'],
             'opponent_action': state.p2['action'],
             'opponentTimer': state.p2['actionTimer'],
-            'secondary_opponent_action': state.p2['secondaryAction'],
             'hearts': state.p1['hearts'],
             'stars': state.p1['stars'],
             'blinkingPink': state.p1['blinkingPink'],

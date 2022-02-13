@@ -21,7 +21,6 @@ class punchoutAIEnv(gym.Env):
             "opponent_id": spaces.Discrete(20),
             "opponent_action": spaces.Discrete(256),
             "opponentTimer": spaces.Discrete(256),
-            "secondary_opponent_action": spaces.Discrete(256),
             "hearts": spaces.Discrete(60),
             "stars": spaces.Discrete(20),
             "blinkingPink": spaces.Discrete(2),
