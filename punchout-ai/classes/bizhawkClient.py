@@ -29,7 +29,7 @@ class BizHawkClient():
     def _SendCommandToEmulator(self, command: str)->str:
         formattedTemplate = self.template % (
             self.buttons['Up'], self.buttons['Down'], self.buttons['Left'], self.buttons['Right'],
-            self.buttons['Start'], self.buttons['A'], self.buttons['B'], command, self.buttons['Timing'])
+            self.buttons['Start'], self.buttons['B'], self.buttons['A'], command, self.buttons['Timing'])
         return formattedTemplate
 
     def Send(self, command: str):
