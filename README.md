@@ -26,3 +26,11 @@ Run
 - You should see Bizhawk and the *runBot.py* script interacting.
 
 **Questions? Read the Wiki.**
+
+If you want to see the bot in action, check this couple of videos:
+
+- mAIc vs Crystal Joe:
+https://youtu.be/hDkURbzZ0Jg
+
+- mAIc vs VonKaiser:
+https://youtu.be/tVxpNlXGEVY
