@@ -6,7 +6,6 @@ import time
 import sys
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-from classes.Agent import Agent
 from classes.KerasRlAgent import KerasAgentRunner
 
 class Program:
