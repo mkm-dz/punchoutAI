@@ -21,7 +21,7 @@ keras-rl2==1.0.5
 libclang==13.0.0
 Markdown==3.3.6
 numpy==1.22.2
-oauthlib==3.2.0
+oauthlib==3.2.1
 opt-einsum==3.3.0
 protobuf==3.19.4
 -e git+https://github.com/mkm-dz/punchoutAI.git@b41067eb5ceb3fd0ff00493a5835aa5ce621efa6#egg=punchout_ai&subdirectory=punchout-ai
