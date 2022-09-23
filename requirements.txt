@@ -23,7 +23,7 @@ Markdown==3.3.6
 numpy==1.22.2
 oauthlib==3.2.0
 opt-einsum==3.3.0
-protobuf==3.19.4
+protobuf==3.19.5
 -e git+https://github.com/mkm-dz/punchoutAI.git@b41067eb5ceb3fd0ff00493a5835aa5ce621efa6#egg=punchout_ai&subdirectory=punchout-ai
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
