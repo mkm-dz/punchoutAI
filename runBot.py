@@ -12,7 +12,7 @@ class Program:
     def __init__(self):
         self.env = gym.make("punchoutAI-v0")
 
-        self.state_size = self.env.observation_space.n
+        self.state_size = self.env.observation_space.shape[0]
         self.agent_runner = KerasAgentRunner(self.state_size, self.env.action_space)
 
     def run(self):

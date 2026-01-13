@@ -120,28 +120,21 @@ class punchUtils():
         return tempCommands
 
     def castEmuStateToObservation(self, state, state_shape):
-        castedSpaces = spaces.Dict({
-            'opponent_id': state.p2['character'],
-            'opponent_action': state.p2['action'],
-            'opponentTimer': state.p2['actionTimer'],
-            'hearts': state.p1['hearts'],
-            'stars': state.p1['stars'],
-            'blinkingPink': state.p1['blinkingPink'],
-            'bersekerAction': state.p1['bersekerAction']
-        })
-
-        # Each observation will be represented as a keras categorical value: a n
-        # bits number with a single "1" that represents the category, where n is
-        # the length of the dimension as specified in the spaces. We then flatten
-        # the result array to get a single binary string that represents the full
-        # state.
-
-        result_array = []
-        for item in castedSpaces.spaces.keys():
-            classes = state_shape.spaces[item]
-            result_array.append(to_categorical(np.unique(castedSpaces.spaces[item])[0], num_classes = np.unique(classes)[0].n, dtype ="int32"))
-        flattened_spaces = [item for sublist in result_array for item in sublist]
-        return flattened_spaces
+        # Changed from one-hot encoding to normalized float values
+        # This is much more efficient: 7 floats instead of 870 bits
+        # Neural networks can learn better from continuous normalized values
+        
+        observation = np.array([
+            state.p2['character'] / 20.0,        # Opponent ID (0-1)
+            state.p2['action'] / 256.0,          # Opponent action (0-1)
+            state.p2['actionTimer'] / 256.0,     # Action timer (0-1)
+            state.p1['hearts'] / 60.0,           # Player hearts (0-1)
+            state.p1['stars'] / 20.0,            # Player stars (0-1)
+            float(state.p1['blinkingPink']),     # Blinking pink (0 or 1)
+            state.p1['bersekerAction'] / 256.0   # Berserker action (0-1)
+        ], dtype=np.float32)
+        
+        return observation
 
     def calculateActionFromIndex(self, index):
         result ={}

@@ -3,3 +3,4 @@ punchout-ai/punchout_ai.egg-info/**/*
 BizHawk/**/*
 !BizHawk/BizHawk.Client.EmuHawk/tools/PunchoutBot/**/*
 /**/__pycache__/**/*
+/*.log

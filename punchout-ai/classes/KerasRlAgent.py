@@ -28,16 +28,22 @@ class MyAgentCallback(Callback):
         super(Callback, self)
 
     def on_episode_begin(self, episode, logs={}):
-        pass
+        # Call the episode_begin_callback
+        if self.episode_begin_callback:
+            self.episode_begin_callback()
 
     def on_episode_end(self, episode, logs={}):
         """Called at end of each episode"""
-        if(logs['episode_reward'] is not None):
+        if(logs.get('episode_reward') is not None):
             logPath = os.path.join(pathlib.Path().absolute() ,'CrystalJoe.log')
             with open(logPath, 'a') as log_file:
-                 log_file.write(str(logs['episode_reward'])+'\n')
+                # Logging with episode number and steps
+                nb_steps = logs.get('nb_steps', 0)
+                log_file.write(f"Episode {episode}: Reward={logs['episode_reward']:.2f}, Steps={nb_steps}\n")
 
-        pass
+            # Print progress every 10 episodes
+            if episode % 10 == 0:
+                print(f"Episode {episode} - Reward: {logs['episode_reward']:.2f}, Steps: {nb_steps}")
 
     def on_step_begin(self, step, logs={}):
         # Called at beginning of each step
@@ -102,18 +108,21 @@ class KerasAgentRunner():
         # Neural Net for Deep-Q learning Model
         model = Sequential()
 
-        # Not really sure this is doing what I expect it is doing (batch_size, input_dim)
-        model.add(Flatten(input_shape=(1, self.state_size )))
-        model.add(Dense(int((self.state_size*3)/2), activation='relu'))
-        model.add(Dense(int(self.state_size/2), activation='relu'))
-        model.add(Dense(int(self.state_size/4), activation='relu'))
+        # Network architecture for 7-feature input state
+        # Flatten not needed for 1D input, but kept for compatibility
+        model.add(Flatten(input_shape=(1, self.state_size)))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(32, activation='relu'))
         model.add(Dense(self.action_space_size, activation='linear'))
 
         memory = SequentialMemory(limit=100000, window_length=1)
         policy = BoltzmannQPolicy()
         self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=2000,
-        target_model_update=1e-2, policy=policy)
+        target_model_update=1e-2, policy=policy, gamma=0.99)  # Added gamma for discount factor
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+        print(f"Model compiled successfully. State size: {self.state_size}, Actions: {self.action_space_size}")
+        model.summary()
         return model
 
     def getRandomAction(self, observation):

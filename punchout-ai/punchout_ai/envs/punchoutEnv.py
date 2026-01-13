@@ -17,30 +17,20 @@ class punchoutAIEnv(gym.Env):
         self.punchUtils = punchUtils()
         self._observation = []
 
-        self.observation_space = spaces.Dict({
-            "opponent_id": spaces.Discrete(20),
-            "opponent_action": spaces.Discrete(256),
-            "opponentTimer": spaces.Discrete(256),
-            "hearts": spaces.Discrete(60),
-            "stars": spaces.Discrete(20),
-            "blinkingPink": spaces.Discrete(2),
-            "bersekerAction": spaces.Discrete(256)
-        })
+        # Instead of a Dict with one-hot encoding we used normalized float values
+        # Reducing to 7 values instead of 870 bits - much more efficient for DQN
+        # State: [opponent_id, opponent_action, timer, hearts, stars, blinkingPink, berserker]
+        self.observation_space = spaces.Box(
+            low=0.0,
+            high=1.0,
+            shape=(7,),
+            dtype=np.float32
+        )
 
         # Setting actions to be integers from 0 to 60, 60 matching the result array
         # from punchoutUtils mapping
-        self.action_space = spaces.Box(low=np.array([0]),high= np.array([60]), dtype=np.int)
-
-        # We do the dimension definition in here. Then we iterate through the
-        # spaces to define the final shape. We could do the full square matrix
-        # but that would take more space that is currently not required.
-        
-        space_length = 0
-        for item in self.observation_space.spaces.values():
-            space_length = space_length + item.n
-
-        self.observation_space.n = space_length
-        self.action_space.n = self.action_space.high[0]
+        # Using  Discrete as DQN requires discrete action space
+        self.action_space = spaces.Discrete(60)
         self.initServer()
 
     def step(self, action_index):
@@ -53,7 +43,7 @@ class punchoutAIEnv(gym.Env):
         done = self.computeDone(_next_state)
         if(done):
             if (_next_state.result=='1'):
-                reward+=30
+                reward += 50
             elif(_next_state.result=='2'):
                 reward += -50
 
@@ -88,39 +78,44 @@ class punchoutAIEnv(gym.Env):
         return tempState
 
     def computeReward(self, observation):
-        result = 0
+        # Per-step penalty to encourage faster victories
+        result = -0.1
+
         blinkingPink = observation.p1['blinkingPink']
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
         didMacHit = observation.p1['score']-self.previousScore
         wasMacHit = observation.p1['health']-self.previousHealth
         hearthWasLost = observation.p1['hearts']-self.previousHearths
+
+        # Reward for landing punches (scaled by damage)
         if (didMacHit > 0):
-            result += 5
+            result += 10  # Base punch reward
             # You get more points for star punches
             if(didMacHit > 3):
                 result += 5
                 # You get even more for landed uppercuts
                 if(didMacHit > 30):
-                    result += 5
+                    result += 10  # Uppercut bonus
             didMacHit = 0
 
+        # Penalty for taking damage
         if(wasMacHit < 0):
-            result += -5
-            # It is even worst if we get hit when flashing pink
+            result += -8  # Increased penalty
             if(blinkingPink == 1):
-                result += -5
+                result += -8  # Double penalty if we get hit when flashing pink
         elif(wasMacHit > 0):
             result += 5
         elif(wasMacHit == 0 and hearthWasLost >= 0):
             # Mac avoided being hit
-            result += 1
+            result += 0.5
         wasMacHit = 0
 
+        # Hearts are critical resources
         if(hearthWasLost < 0):
-            result += -3
+            result += -10  # Losing heart is very bad (increased from -3)
         elif(hearthWasLost > 0):
-            result += 5
+            result += 15  # Gaining heart is very good (increased from 5)
         hearthWasLost = 0
 
         # This can be considered the last method so we
