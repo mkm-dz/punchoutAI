@@ -44,6 +44,7 @@ class BizHawkServer(threading.Thread):
         self.ready = True
         while True:
             client, address = self.sock.accept()
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
 
