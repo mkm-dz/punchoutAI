@@ -10,7 +10,7 @@ class Payload(object):
 
 
 class BizHawkClient():
-    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"c:\\\\users\\\\user\\\\Desktop\\\\punchOut\\\\punchOut2.state"}'
+    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"d:\\\\documents\\\\Documentation\\\\punchOut\\\\punchOut1.state"}'
 
     server_address = None
     hit = False
@@ -22,6 +22,8 @@ class BizHawkClient():
     def __init__(self):
         # Create a TCP/IP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Disable Nagle's algorithm for lower latency
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         # Bind the socket to the port
         self.server_address = ('localhost', 9998)
