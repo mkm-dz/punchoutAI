@@ -31,11 +31,17 @@ class BizHawkServer(threading.Thread):
         self.sock.listen(10)
 
     def listenToClient(self, client, address):
+        buffer = ""
         while True:
             data = client.recv(2048)
             if data:
-                state=Payload(data.decode())
-                self.publicState = state
+                buffer += data.decode()
+                # Process complete messages (delimited by newline)
+                while "\n" in buffer:
+                    message, buffer = buffer.split("\n", 1)
+                    if message.strip():
+                        state = Payload(message)
+                        self.publicState = state
             else:
                 break
 
