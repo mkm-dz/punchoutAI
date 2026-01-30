@@ -53,7 +53,7 @@ class BizHawkClient():
         try:
             self._ensure_connected()
             if command is not None:
-                msg = self._SendCommandToEmulator(command)
+                msg = self._SendCommandToEmulator(command) + "\n"
                 self.sock.sendall(msg.encode('utf-8'))
         except (socket.error, OSError) as e:
             # Connection lost, mark as disconnected and retry once
@@ -61,7 +61,7 @@ class BizHawkClient():
             try:
                 self._ensure_connected()
                 if command is not None:
-                    msg = self._SendCommandToEmulator(command)
+                    msg = self._SendCommandToEmulator(command) + "\n"
                     self.sock.sendall(msg.encode('utf-8'))
             except:
                 raise

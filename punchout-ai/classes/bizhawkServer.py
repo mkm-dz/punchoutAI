@@ -51,7 +51,9 @@ class BizHawkServer(threading.Thread):
         while True:
             client, address = self.sock.accept()
             client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            threading.Thread(target = self.listenToClient,args = (client,address)).start()
+            t = threading.Thread(target = self.listenToClient, args = (client,address))
+            t.daemon = True  # Allow clean shutdown
+            t.start()
 
 
 # if __name__ == "__main__":
