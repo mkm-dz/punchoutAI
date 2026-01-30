@@ -32,7 +32,7 @@ class BizHawkServer(threading.Thread):
 
     def listenToClient(self, client, address):
         while True:
-            data = client.recv(1024)
+            data = client.recv(2048)
             if data:
                 state=Payload(data.decode())
                 self.publicState = state
