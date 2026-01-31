@@ -121,17 +121,25 @@ class punchUtils():
 
     def castEmuStateToObservation(self, state, state_shape):
         # Changed from one-hot encoding to normalized float values
-        # This is much more efficient: 7 floats instead of 870 bits
+        # This is much more efficient: 15 floats instead of 870 bits
         # Neural networks can learn better from continuous normalized values
         
         observation = np.array([
             state.p2['character'] / 20.0,        # Opponent ID (0-1)
-            state.p2['action'] / 256.0,          # Opponent action (0-1)
-            state.p2['actionTimer'] / 256.0,     # Action timer (0-1)
+            state.p2['action'] / 256.0,          # Opponent state (0-1)
             state.p1['hearts'] / 60.0,           # Player hearts (0-1)
             state.p1['stars'] / 20.0,            # Player stars (0-1)
             float(state.p1['blinkingPink']),     # Blinking pink (0 or 1)
-            state.p1['bersekerAction'] / 256.0   # Berserker action (0-1)
+            state.p1['bersekerAction'] / 256.0,  # Berserker action (0-1)
+            state.elapsed_minutes / 10.0,        # Elapsed minutes (0-1, assuming max 10 min)
+            state.elapsed_seconds / 60.0,        # Elapsed seconds (0-1)
+            state.elapsed_decimals / 100.0,      # Elapsed decimals (0-1)
+            state.opp_y_position / 256.0,        # Opponent Y position (0-1)
+            state.opp_sprite_pos1 / 256.0,       # Opponent sprite pos 1 (0-1)
+            state.opp_sprite_pos2 / 256.0,       # Opponent sprite pos 2 (0-1)
+            state.opp_next_action_timer / 256.0, # Opponent next action timer (0-1)
+            state.opp_next_action / 256.0,       # Opponent next action (0-1)
+            state.opp_action_set / 256.0         # Opponent action set (0-1)
         ], dtype=np.float32)
         
         return observation
