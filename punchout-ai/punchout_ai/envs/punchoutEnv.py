@@ -11,6 +11,7 @@ class punchoutAIEnv(gym.Env):
     previousScore = 0
     previousHealth = 0
     previousHearths = -1000
+    previousBlinkingPink = 0
 
     def __init__(self):
         self.server = BizHawkServer()
@@ -18,12 +19,14 @@ class punchoutAIEnv(gym.Env):
         self._observation = []
 
         # Instead of a Dict with one-hot encoding we used normalized float values
-        # Reducing to 7 values instead of 870 bits - much more efficient for DQN
-        # State: [opponent_id, opponent_action, timer, hearts, stars, blinkingPink, berserker]
+        # Reducing to 15 values instead of 870 bits - much more efficient for DQN
+        # State: [opponent_id, opponent_state, hearts, stars, blinkingPink, berserker, 
+        #         elapsed_min, elapsed_sec, elapsed_dec, opp_y_pos, opp_sprite1, opp_sprite2, 
+        #         opp_next_action_timer, opp_next_action, opp_action_set]
         self.observation_space = spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(7,),
+            shape=(15,),
             dtype=np.float32
         )
 
@@ -43,7 +46,15 @@ class punchoutAIEnv(gym.Env):
         done = self.computeDone(_next_state)
         if(done):
             if (_next_state.result=='1'):
-                reward += 50
+                # Differentiate KO vs Decision wins
+                if (_next_state.p2['health'] == 0):  # KO victory
+                    reward += 50
+                    # Early KO bonus (max +18 for instant KO)
+                    elapsed_total_seconds = _next_state.elapsed_minutes * 60 + _next_state.elapsed_seconds + _next_state.elapsed_decimals / 100.0
+                    time_bonus = (180 - elapsed_total_seconds) / 10
+                    reward += time_bonus
+                else:  # Decision victory
+                    reward += 10  # Lower reward for decision wins
             elif(_next_state.result=='2'):
                 reward += -50
 
@@ -53,6 +64,7 @@ class punchoutAIEnv(gym.Env):
         self.previousScore = 0
         self.previousHealth = 96
         self.previousHearths = -1000
+        self.previousBlinkingPink = 0
         self.punchUtils.sendCommand('reset')
         rawObservation = self.WaitForServer()
         castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation, self.observation_space)
@@ -78,10 +90,19 @@ class punchoutAIEnv(gym.Env):
         return tempState
 
     def computeReward(self, observation):
+        blinkingPink = observation.p1['blinkingPink']
+        
         # Per-step penalty to encourage faster victories
         result = -0.1
-
-        blinkingPink = observation.p1['blinkingPink']
+        
+        # Being pink is dangerous - extra penalty for vulnerability
+        if blinkingPink == 1:
+            result += -0.2  # Additional penalty while stunned
+        
+        # Big reward for successfully recovering from pink state (dodge worked!)
+        if self.previousBlinkingPink == 1 and blinkingPink == 0:
+            result += 10  # Strong reward for quick recovery
+        
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
         didMacHit = observation.p1['score']-self.previousScore
@@ -123,6 +144,7 @@ class punchoutAIEnv(gym.Env):
         self.previousScore = observation.p1['score']
         self.previousHealth = observation.p1['health']
         self.previousHearths = observation.p1['hearts']
+        self.previousBlinkingPink = blinkingPink
         return result
 
     def computeDone(self, observation):
