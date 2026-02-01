@@ -12,6 +12,7 @@ class punchoutAIEnv(gym.Env):
     previousHealth = 0
     previousHearths = -1000
     previousBlinkingPink = 0
+    previousOpponentHealth = -1000
 
     def __init__(self):
         self.server = BizHawkServer()
@@ -65,6 +66,7 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = 96
         self.previousHearths = -1000
         self.previousBlinkingPink = 0
+        self.previousOpponentHealth = -1000
         self.punchUtils.sendCommand('reset')
         rawObservation = self.WaitForServer()
         castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation, self.observation_space)
@@ -109,20 +111,21 @@ class punchoutAIEnv(gym.Env):
         
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
+        if(self.previousOpponentHealth == -1000):
+            self.previousOpponentHealth = observation.p2['health']
+        
         didMacHit = observation.p1['score']-self.previousScore
         wasMacHit = observation.p1['health']-self.previousHealth
         hearthWasLost = observation.p1['hearts']-self.previousHearths
+        opponentDamage = self.previousOpponentHealth - observation.p2['health']
 
-        # Reward for landing punches (scaled by damage)
-        if (didMacHit > 0):
-            result += 10  # Base punch reward
-            # You get more points for star punches
-            if(didMacHit > 3):
-                result += 5
-                # You get even more for landed uppercuts
-                if(didMacHit > 30):
-                    result += 10  # Uppercut bonus
-            didMacHit = 0
+        # Reward based on actual opponent damage dealt (optimizes win condition)
+        if opponentDamage > 0:
+            if observation.p2['health'] == 0:  # KO punch (finishing blow)
+                result += opponentDamage * 3  # Triple reward for knockout hit
+            else:
+                result += opponentDamage * 2  # Double reward for normal damage
+            opponentDamage = 0
 
         # Penalty for taking damage
         if(wasMacHit < 0):
@@ -133,11 +136,9 @@ class punchoutAIEnv(gym.Env):
             result += 5
         wasMacHit = 0
 
-        # Hearts are critical resources
+        # Hearts are critical resources - only penalize loss (gain reward removed to prevent exploitation)
         if(hearthWasLost < 0):
-            result += -10  # Losing heart is very bad (increased from -3)
-        elif(hearthWasLost > 0):
-            result += 15  # Gaining heart is very good (increased from 5)
+            result += -10  # Losing heart is very bad
         hearthWasLost = 0
 
         # This can be considered the last method so we
@@ -146,6 +147,7 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = observation.p1['health']
         self.previousHearths = observation.p1['hearts']
         self.previousBlinkingPink = blinkingPink
+        self.previousOpponentHealth = observation.p2['health']
         return result
 
     def computeDone(self, observation):
