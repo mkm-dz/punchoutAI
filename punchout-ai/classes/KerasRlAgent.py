@@ -35,7 +35,7 @@ class MyAgentCallback(Callback):
     def on_episode_end(self, episode, logs={}):
         """Called at end of each episode"""
         if(logs.get('episode_reward') is not None):
-            logPath = os.path.join(pathlib.Path().absolute() ,'CrystalJoe.log')
+            logPath = os.path.join(pathlib.Path().absolute() ,'VonKaizer.log')
             with open(logPath, 'a') as log_file:
                 # Logging with episode number and steps
                 nb_steps = logs.get('nb_steps', 0)
@@ -95,14 +95,14 @@ class KerasAgentRunner():
     brain=None
     verbose = False
     def __init__(self, state_size, action_space):
-        self.weight_backup = "CrystalJoe"
+        self.weight_backup = "VonKaizer"
         self.state_size = state_size
         self.action_space =  action_space
         self.action_space_size = action_space.n
         self.brain = self._build_model()
 
     def _build_model(self):
-        logPath = os.path.join(pathlib.Path().absolute() , 'CrystalJoe.log')
+        logPath = os.path.join(pathlib.Path().absolute() , 'VonKaizer.log')
         with open(logPath, 'w+'):
             pass
         # Neural Net for Deep-Q learning Model
@@ -143,8 +143,15 @@ class KerasAgentRunner():
     def run(self, env):
         #start policy only gets called when there are warmup steps (nb_max steps)
         callback = [MyAgentCallback(self.load_model, self.save_model, self.verbose)]
-        self.dqn.fit(env,nb_steps=30000,
+        self.dqn.fit(env,nb_steps=50000,
         visualize=False,
         verbose=1,
         callbacks=callback,
         start_step_policy=self.getRandomAction)
+
+    def play(self, env, nb_episodes=10):
+        """Play mode - uses trained weights, no learning"""
+        # Load weights before playing
+        self.load_model()
+        # Test mode: exploits learned policy, no exploration or training
+        self.dqn.test(env, nb_episodes=nb_episodes, visualize=False, verbose=1)

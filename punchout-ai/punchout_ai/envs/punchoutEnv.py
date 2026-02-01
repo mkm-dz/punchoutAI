@@ -19,14 +19,14 @@ class punchoutAIEnv(gym.Env):
         self._observation = []
 
         # Instead of a Dict with one-hot encoding we used normalized float values
-        # Reducing to 15 values instead of 870 bits - much more efficient for DQN
-        # State: [opponent_id, opponent_state, hearts, stars, blinkingPink, berserker, 
-        #         elapsed_min, elapsed_sec, elapsed_dec, opp_y_pos, opp_sprite1, opp_sprite2, 
-        #         opp_next_action_timer, opp_next_action, opp_action_set]
+        # Reducing to 12 values instead of 870 bits - much more efficient for DQN
+        # State: [opponent_id, opponent_state, hearts, stars, blinkingPink, berserker,
+        #         opp_y_pos, opp_sprite1, opp_sprite2, opp_next_action_timer, opp_next_action, opp_action_set]
+        # Removed elapsed time - creates noise in learning (time used in rewards only)
         self.observation_space = spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(15,),
+            shape=(12,),
             dtype=np.float32
         )
 
@@ -99,9 +99,13 @@ class punchoutAIEnv(gym.Env):
         if blinkingPink == 1:
             result += -0.2  # Additional penalty while stunned
         
+        # Heavy penalty for falling INTO pink state (getting stunned)
+        if self.previousBlinkingPink == 0 and blinkingPink == 1:
+            result += -25  # Prevents reward exploitation - never want to get stunned!
+        
         # Big reward for successfully recovering from pink state (dodge worked!)
         if self.previousBlinkingPink == 1 and blinkingPink == 0:
-            result += 10  # Strong reward for quick recovery
+            result += 25  # Mitigates the entry penalty - net neutral if quick recovery
         
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
@@ -127,9 +131,6 @@ class punchoutAIEnv(gym.Env):
                 result += -8  # Double penalty if we get hit when flashing pink
         elif(wasMacHit > 0):
             result += 5
-        elif(wasMacHit == 0 and hearthWasLost >= 0):
-            # Mac avoided being hit
-            result += 0.5
         wasMacHit = 0
 
         # Hearts are critical resources

@@ -121,8 +121,9 @@ class punchUtils():
 
     def castEmuStateToObservation(self, state, state_shape):
         # Changed from one-hot encoding to normalized float values
-        # This is much more efficient: 15 floats instead of 870 bits
+        # This is much more efficient: 12 floats instead of 870 bits
         # Neural networks can learn better from continuous normalized values
+        # Removed elapsed time (minutes/seconds/decimals) - time creates noise in learning
         
         observation = np.array([
             state.p2['character'] / 20.0,        # Opponent ID (0-1)
@@ -131,9 +132,6 @@ class punchUtils():
             state.p1['stars'] / 20.0,            # Player stars (0-1)
             float(state.p1['blinkingPink']),     # Blinking pink (0 or 1)
             state.p1['bersekerAction'] / 256.0,  # Berserker action (0-1)
-            state.elapsed_minutes / 10.0,        # Elapsed minutes (0-1, assuming max 10 min)
-            state.elapsed_seconds / 60.0,        # Elapsed seconds (0-1)
-            state.elapsed_decimals / 100.0,      # Elapsed decimals (0-1)
             state.opp_y_position / 256.0,        # Opponent Y position (0-1)
             state.opp_sprite_pos1 / 256.0,       # Opponent sprite pos 1 (0-1)
             state.opp_sprite_pos2 / 256.0,       # Opponent sprite pos 2 (0-1)
