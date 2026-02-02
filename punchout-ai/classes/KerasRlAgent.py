@@ -119,18 +119,19 @@ class KerasAgentRunner():
         memory = SequentialMemory(limit=100000, window_length=1)
         policy = BoltzmannQPolicy()
         
-        # Check if weights exist - if so, skip warmup (continuing training)
+        # Check if weights exist - if so, use shorter warmup (just to fill memory buffer)
+        # Memory is never saved, only weights, so we always need some warmup to populate memory
         weights_exist = os.path.isfile(self.weight_backup + ".dqn.index")
-        warmup_steps = 0 if weights_exist else 2000
+        warmup_steps = 300 if weights_exist else 2000  # Minimum 300 to fill memory buffer
         
         self.dqn = DQNAgent(model=model, processor=MyProcessor(self.verbose),nb_actions=self.action_space_size, memory=memory, nb_steps_warmup=warmup_steps,
         target_model_update=1e-2, policy=policy, gamma=0.99)  # Added gamma for discount factor
         self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         
         if weights_exist:
-            print(f"Existing weights found - skipping warmup phase")
+            print(f"Existing weights found - using short warmup ({warmup_steps} steps) to fill memory")
         else:
-            print(f"No existing weights - using {warmup_steps} warmup steps")
+            print(f"No existing weights - using full warmup ({warmup_steps} steps)")
         print(f"Model compiled successfully. State size: {self.state_size}, Actions: {self.action_space_size}")
         model.summary()
         return model

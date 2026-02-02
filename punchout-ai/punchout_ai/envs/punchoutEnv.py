@@ -31,10 +31,10 @@ class punchoutAIEnv(gym.Env):
             dtype=np.float32
         )
 
-        # Setting actions to be integers from 0 to 60, 60 matching the result array
-        # from punchoutUtils mapping
+        # Setting actions to be integers from 0 to 72, 72 matching the result array
+        # from punchoutUtils mapping (60 original + 12 double-tap down variations)
         # Using  Discrete as DQN requires discrete action space
-        self.action_space = spaces.Discrete(60)
+        self.action_space = spaces.Discrete(72)
         self.initServer()
 
     def step(self, action_index):
