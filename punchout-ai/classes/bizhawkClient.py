@@ -10,7 +10,6 @@ class Payload(object):
 
 
 class BizHawkClient():
-    template = '{"p1":{"Up":%s,"Down":%s,"Left":%s,"Right":%s,"Start":%s,"Select":false,"B":%s,"A":%s},"p2":{},"type":"%s","timing":"%s","savegamepath":"d:\\\\documents\\\\Documentation\\\\punchOut\\\\punchOut1.state"}'
 
     server_address = None
     hit = False
@@ -43,10 +42,25 @@ class BizHawkClient():
             self._connected = True
 
     def _SendCommandToEmulator(self, command: str)->str:
-        formattedTemplate = self.template % (
-            self.buttons['Up'], self.buttons['Down'], self.buttons['Left'], self.buttons['Right'],
-            self.buttons['Start'], self.buttons['B'], self.buttons['A'], command, self.buttons['Timing'])
-        return formattedTemplate
+        # Build command as proper JSON object (handles booleans correctly)
+        cmd = {
+            "p1": {
+                "Up": self.buttons['Up'],
+                "Down": self.buttons['Down'],
+                "Left": self.buttons['Left'],
+                "Right": self.buttons['Right'],
+                "Start": self.buttons['Start'],
+                "Select": False,
+                "B": self.buttons['B'],
+                "A": self.buttons['A'],
+                "DoubleTapDown": self.buttons.get('DoubleTapDown', False)
+            },
+            "p2": {},
+            "type": command,
+            "timing": self.buttons['Timing'],
+            "savegamepath": "d:\\documents\\Documentation\\punchOut\\punchOut2.state"
+        }
+        return json.dumps(cmd)
 
     def Send(self, command: str):
         """Send command to emulator, with auto-reconnection on failure"""

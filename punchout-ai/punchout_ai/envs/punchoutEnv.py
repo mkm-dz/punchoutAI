@@ -12,6 +12,7 @@ class punchoutAIEnv(gym.Env):
     previousHealth = 0
     previousHearths = -1000
     previousBlinkingPink = 0
+    previousOpponentHealth = -1000
 
     def __init__(self):
         self.server = BizHawkServer()
@@ -19,21 +20,21 @@ class punchoutAIEnv(gym.Env):
         self._observation = []
 
         # Instead of a Dict with one-hot encoding we used normalized float values
-        # Reducing to 15 values instead of 870 bits - much more efficient for DQN
-        # State: [opponent_id, opponent_state, hearts, stars, blinkingPink, berserker, 
-        #         elapsed_min, elapsed_sec, elapsed_dec, opp_y_pos, opp_sprite1, opp_sprite2, 
-        #         opp_next_action_timer, opp_next_action, opp_action_set]
+        # Reducing to 12 values instead of 870 bits - much more efficient for DQN
+        # State: [opponent_id, opponent_state, hearts, stars, blinkingPink, berserker,
+        #         opp_y_pos, opp_sprite1, opp_sprite2, opp_next_action_timer, opp_next_action, opp_action_set]
+        # Removed elapsed time - creates noise in learning (time used in rewards only)
         self.observation_space = spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(15,),
+            shape=(12,),
             dtype=np.float32
         )
 
-        # Setting actions to be integers from 0 to 60, 60 matching the result array
-        # from punchoutUtils mapping
+        # Setting actions to be integers from 0 to 72, 72 matching the result array
+        # from punchoutUtils mapping (60 original + 12 double-tap down variations)
         # Using  Discrete as DQN requires discrete action space
-        self.action_space = spaces.Discrete(60)
+        self.action_space = spaces.Discrete(72)
         self.initServer()
 
     def step(self, action_index):
@@ -65,6 +66,7 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = 96
         self.previousHearths = -1000
         self.previousBlinkingPink = 0
+        self.previousOpponentHealth = -1000
         self.punchUtils.sendCommand('reset')
         rawObservation = self.WaitForServer()
         castedObservation = self.punchUtils.castEmuStateToObservation(rawObservation, self.observation_space)
@@ -99,26 +101,31 @@ class punchoutAIEnv(gym.Env):
         if blinkingPink == 1:
             result += -0.2  # Additional penalty while stunned
         
+        # Heavy penalty for falling INTO pink state (getting stunned)
+        if self.previousBlinkingPink == 0 and blinkingPink == 1:
+            result += -25  # Prevents reward exploitation - never want to get stunned!
+        
         # Big reward for successfully recovering from pink state (dodge worked!)
         if self.previousBlinkingPink == 1 and blinkingPink == 0:
-            result += 10  # Strong reward for quick recovery
+            result += 25  # Mitigates the entry penalty - net neutral if quick recovery
         
         if(self.previousHearths == -1000):
             self.previousHearths = observation.p1['hearts']
+        if(self.previousOpponentHealth == -1000):
+            self.previousOpponentHealth = observation.p2['health']
+        
         didMacHit = observation.p1['score']-self.previousScore
         wasMacHit = observation.p1['health']-self.previousHealth
         hearthWasLost = observation.p1['hearts']-self.previousHearths
+        opponentDamage = self.previousOpponentHealth - observation.p2['health']
 
-        # Reward for landing punches (scaled by damage)
-        if (didMacHit > 0):
-            result += 10  # Base punch reward
-            # You get more points for star punches
-            if(didMacHit > 3):
-                result += 5
-                # You get even more for landed uppercuts
-                if(didMacHit > 30):
-                    result += 10  # Uppercut bonus
-            didMacHit = 0
+        # Reward based on actual opponent damage dealt (optimizes win condition)
+        if opponentDamage > 0:
+            if observation.p2['health'] == 0:  # KO punch (finishing blow)
+                result += opponentDamage * 3  # Triple reward for knockout hit
+            else:
+                result += opponentDamage * 2  # Double reward for normal damage
+            opponentDamage = 0
 
         # Penalty for taking damage
         if(wasMacHit < 0):
@@ -127,16 +134,11 @@ class punchoutAIEnv(gym.Env):
                 result += -8  # Double penalty if we get hit when flashing pink
         elif(wasMacHit > 0):
             result += 5
-        elif(wasMacHit == 0 and hearthWasLost >= 0):
-            # Mac avoided being hit
-            result += 0.5
         wasMacHit = 0
 
-        # Hearts are critical resources
+        # Hearts are critical resources - only penalize loss (gain reward removed to prevent exploitation)
         if(hearthWasLost < 0):
-            result += -10  # Losing heart is very bad (increased from -3)
-        elif(hearthWasLost > 0):
-            result += 15  # Gaining heart is very good (increased from 5)
+            result += -10  # Losing heart is very bad
         hearthWasLost = 0
 
         # This can be considered the last method so we
@@ -145,6 +147,7 @@ class punchoutAIEnv(gym.Env):
         self.previousHealth = observation.p1['health']
         self.previousHearths = observation.p1['hearts']
         self.previousBlinkingPink = blinkingPink
+        self.previousOpponentHealth = observation.p2['health']
         return result
 
     def computeDone(self, observation):
