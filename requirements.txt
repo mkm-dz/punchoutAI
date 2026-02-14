@@ -21,7 +21,7 @@ keras-rl2==1.0.5
 libclang==13.0.0
 Markdown==3.3.6
 numpy==1.22.2
-oauthlib==3.2.0
+oauthlib==3.2.2
 opt-einsum==3.3.0
 protobuf==3.19.4
 -e ./punchout-ai
